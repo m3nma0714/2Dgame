@@ -857,6 +857,30 @@ if (
     window.addEventListener('DOMContentLoaded', createMobileControls);
 }
 
+// ステージ選択画面でのタッチ操作
+canvas.addEventListener('touchstart', function(e) {
+    if (gameState === GAME_STATE.STAGE_SELECT) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const tx = touch.clientX - rect.left;
+        const ty = touch.clientY - rect.top;
+
+        // ステージ名の表示位置と同じY座標範囲を判定
+        for (let i = 0; i < stages.length; i++) {
+            const stageY = 200 + i * 60;
+            if (ty > stageY - 30 && ty < stageY + 30) {
+                selectedStageIndex = i;
+                draw();
+                // すぐにゲーム開始
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+                break;
+            }
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
+
 // 6. ゲーム開始
 //------------------------------------
 gameLoop();
