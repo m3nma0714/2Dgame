@@ -257,32 +257,36 @@ let isGameOver = false;  // ゲームオーバー状態を管理
 // スコア
 let score = 0;
 
+let lastTimestamp = performance.now();
+
 // 3. ゲームループ
 //------------------------------------
-function gameLoop() {
-    update();
+function gameLoop(timestamp) {
+    const delta = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+    lastTimestamp = timestamp;
+    update(delta);
     draw();
     requestAnimationFrame(gameLoop);
 }
 
 // 4. 更新処理
 //------------------------------------
-function update() {
+function update(delta) {
     if (gameState === GAME_STATE.PLAY) {
         if (isGameClear || isGameOver) return;
 
-        // 左右の移動
         if (keys.right) {
-            player.velocityX = player.speed;
+            player.velocityX = player.speed * delta * 60;
         } else if (keys.left) {
-            player.velocityX = -player.speed;
+            player.velocityX = -player.speed * delta * 60;
         } else {
             player.velocityX = 0;
         }
 
         // プレイヤーの位置を更新
         player.x += player.velocityX;
-        player.y += player.velocityY;
+        player.y += player.velocityY * delta * 60;
+        player.velocityY += gravity * delta * 60;
 
         // プレイヤーが画面外に出ないように制限
         // スクロールを考慮し、カメラ位置と画面幅で制限
@@ -290,9 +294,6 @@ function update() {
         // ステージの右端（地面の右端）で止める
         const stageRight = Math.max(...platforms.map(p => p.x + p.width));
         if (player.x + player.width > stageRight) player.x = stageRight - player.width;
-
-        // 重力を適用
-        player.velocityY += gravity;
 
         // カメラのスクロール処理
         // プレイヤーが画面中央より右に来たらカメラを右に動かす
@@ -932,4 +933,4 @@ if (
 
 // 6. ゲーム開始
 //------------------------------------
-gameLoop();
+gameLoop(performance.now());
