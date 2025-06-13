@@ -167,7 +167,7 @@ const stages = [
         platforms: [
             { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
             { x: 300, y: 250, width: 100, height: 20, color: 'brown' },
-            { x: 400, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 600, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 900, y: 120, width: 100, height: 20, color: 'brown' },
             { x: 1200, y: 80, width: 100, height: 20, color: 'brown' },
             { x: 1500, y: 200, width: 100, height: 20, color: 'brown' }
@@ -206,7 +206,7 @@ playerImg.src = "static/player.png"; // 画像ファイルはstaticフォルダ�
 const enemyImg = new Image();
 enemyImg.src = "static/enemy.png"; // staticフォルダにenemy.pngを配置
 
-// 浮遊敵画像（例：別画像を使う場合）
+// 浮遊敵画像の読み込み
 const floatingEnemyImg = new Image();
 floatingEnemyImg.src = "static/floating_enemy.png"; // staticフォルダにfloating_enemy.pngを配置
 
@@ -436,27 +436,38 @@ function draw() {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        // プレイヤーを画像で描画
-        if (playerImg.complete) {
+        // プレイヤー画像描画
+        if (playerImg.complete && playerImg.naturalWidth !== 0) {
             ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
         } else {
-            // 画像がまだ読み込まれていない場合は四角で描画
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
 
-        // 地面を歩く敵を画像で描画（向き反転対応）
-        if (enemyImg.complete) {
+        // 地面を歩く敵画像描画（画像の比率に合わせてサイズ調整＋向き反転対応）
+        if (enemyImg.complete && enemyImg.naturalWidth !== 0) {
+            const aspect = enemyImg.naturalWidth / enemyImg.naturalHeight;
+            let drawWidth = enemy.height * aspect;
+            let drawHeight = enemy.height;
+            let drawX = enemy.x + (enemy.width - drawWidth) / 2;
+            let drawY = enemy.y;
+
             ctx.save();
-            // 右向き（direction > 0）のときは反転
             if (enemy.direction > 0) {
-                ctx.translate(enemy.x + enemy.width, enemy.y);
+                // 右向きのときは画像を左右反転
+                ctx.translate(drawX + drawWidth / 2, drawY + drawHeight / 2);
                 ctx.scale(-1, 1);
-                ctx.drawImage(enemyImg, 0, 0, enemy.width, enemy.height);
+                ctx.drawImage(
+                    enemyImg,
+                    -drawWidth / 2,
+                    -drawHeight / 2,
+                    drawWidth,
+                    drawHeight
+                );
             } else {
-                ctx.translate(enemy.x, enemy.y);
-                ctx.scale(1, 1);
-                ctx.drawImage(enemyImg, 0, 0, enemy.width, enemy.height);
+                // 左向き（通常）のとき
+                ctx.translate(drawX, drawY);
+                ctx.drawImage(enemyImg, 0, 0, drawWidth, drawHeight);
             }
             ctx.restore();
         } else {
@@ -464,10 +475,15 @@ function draw() {
             ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         }
 
-        // 浮遊敵を画像で描画
+        // 浮遊敵を画像で描画（画像の比率に合わせてサイズ調整）
         for (const fe of floatingEnemies) {
-            if (floatingEnemyImg.complete) {
-                ctx.drawImage(floatingEnemyImg, fe.x, fe.y, fe.width, fe.height);
+            if (floatingEnemyImg.complete && floatingEnemyImg.naturalWidth !== 0) {
+                const aspect = floatingEnemyImg.naturalWidth / floatingEnemyImg.naturalHeight;
+                let drawWidth = fe.height * aspect;
+                let drawHeight = fe.height;
+                let drawX = fe.x + (fe.width - drawWidth) / 2;
+                let drawY = fe.y;
+                ctx.drawImage(floatingEnemyImg, drawX, drawY, drawWidth, drawHeight);
             } else {
                 ctx.fillStyle = fe.color;
                 ctx.fillRect(fe.x, fe.y, fe.width, fe.height);
