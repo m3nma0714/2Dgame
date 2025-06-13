@@ -171,13 +171,15 @@ const stages = [
             { x: 550, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 840, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 1050, y: 80, width: 30, height: 20, color: 'brown' },
-            { x: 1300, y: 200, width: 30, height: 20, color: 'brown' }
+            { x: 1300, y: 200, width: 30, height: 20, color: 'brown' },
+            { x: 1500, y: 200, width: 30, height: 20, color: 'brown' },
+            { x: 1600, y: 130, width: 20, height: 20, color: 'brown' }
         ],
         coins: [
             { x: 350, y: 210, radius: 12, collected: false, score: 10 },
             { x: 600, y: 100, radius: 12, collected: false, score: 10 },
             { x: 950, y: 100, radius: 12, collected: false, score: 10 },
-            { x: 1350, y: 160, radius: 16, collected: false, score: 50 }
+            { x: 1400, y: 100, radius: 16, collected: false, score: 50 }
         ],
         enemy: {
             x: 500, y: 320, width: 40, height: 30, color: 'blue', speed: 4, direction: 1
