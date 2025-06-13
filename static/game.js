@@ -167,7 +167,7 @@ const stages = [
         platforms: [
             { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
             { x: 300, y: 250, width: 100, height: 20, color: 'brown' },
-            { x: 600, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 400, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 900, y: 120, width: 100, height: 20, color: 'brown' },
             { x: 1200, y: 80, width: 100, height: 20, color: 'brown' },
             { x: 1500, y: 200, width: 100, height: 20, color: 'brown' }
@@ -201,6 +201,14 @@ let selectedStageIndex = 0;
 // プレイヤー画像の読み込み
 const playerImg = new Image();
 playerImg.src = "static/player.png"; // 画像ファイルはstaticフォルダに配置してください
+
+// 敵画像の読み込み
+const enemyImg = new Image();
+enemyImg.src = "static/enemy.png"; // staticフォルダにenemy.pngを配置
+
+// 浮遊敵画像（例：別画像を使う場合）
+const floatingEnemyImg = new Image();
+floatingEnemyImg.src = "static/floating_enemy.png"; // staticフォルダにfloating_enemy.pngを配置
 
 // 現在のステージデータをセットする関数
 function loadStage(index) {
@@ -437,14 +445,33 @@ function draw() {
             ctx.fillRect(player.x, player.y, player.width, player.height);
         }
 
-        // 地面を歩く敵を描画
-        ctx.fillStyle = enemy.color;
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        // 地面を歩く敵を画像で描画（向き反転対応）
+        if (enemyImg.complete) {
+            ctx.save();
+            // 右向き（direction > 0）のときは反転
+            if (enemy.direction > 0) {
+                ctx.translate(enemy.x + enemy.width, enemy.y);
+                ctx.scale(-1, 1);
+                ctx.drawImage(enemyImg, 0, 0, enemy.width, enemy.height);
+            } else {
+                ctx.translate(enemy.x, enemy.y);
+                ctx.scale(1, 1);
+                ctx.drawImage(enemyImg, 0, 0, enemy.width, enemy.height);
+            }
+            ctx.restore();
+        } else {
+            ctx.fillStyle = enemy.color;
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        }
 
-        // 浮遊敵を描画
+        // 浮遊敵を画像で描画
         for (const fe of floatingEnemies) {
-            ctx.fillStyle = fe.color;
-            ctx.fillRect(fe.x, fe.y, fe.width, fe.height);
+            if (floatingEnemyImg.complete) {
+                ctx.drawImage(floatingEnemyImg, fe.x, fe.y, fe.width, fe.height);
+            } else {
+                ctx.fillStyle = fe.color;
+                ctx.fillRect(fe.x, fe.y, fe.width, fe.height);
+            }
         }
 
         // ステージを描画
