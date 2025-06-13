@@ -559,9 +559,9 @@ function draw() {
             ctx.font = "24px sans-serif";
             ctx.fillStyle = "white";
             if (selectedStageIndex < stages.length - 1) {
-                ctx.fillText("スペースキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("enterキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             } else {
-                ctx.fillText("スペースキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("enterキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             }
             // ゴールスコア表示
             if (goalTouchY !== null) {
@@ -572,15 +572,24 @@ function draw() {
             }
         }
 
-        // ゲームオーバー時に文字を表示
+        // ゲームオーバー時に画面を暗転＋文字を表示
         if (isGameOver) {
-            ctx.font = "48px sans-serif";
+            // 画面全体を半透明の黒で覆う（カメラ位置を考慮せず画面全体に）
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            ctx.restore();
+
+            // 文字を大きく・中央に表示（カメラ位置を加えず、画面中央に固定）
+            ctx.font = "bold 60px sans-serif";
             ctx.fillStyle = "red";
             ctx.textAlign = "center";
             ctx.fillText("ゲームオーバー", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-            ctx.font = "24px sans-serif";
+
+            ctx.font = "28px sans-serif";
             ctx.fillStyle = "white";
-            ctx.fillText("スペースキーでリスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+            ctx.fillText("enterキー または 画面タップでリスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 60);
         }
 
         // スコア表示（画面左上固定）
@@ -608,8 +617,15 @@ canvas.addEventListener('click', (e) => {
     }
 });
 
-// ステージ選択画面のキー操作を追加
 document.addEventListener('keydown', (e) => {
+    // タイトル画面でエンターキーを押したらゲームスタート
+    if (gameState === GAME_STATE.TITLE && e.key === "Enter") {
+        gameState = GAME_STATE.STAGE_SELECT;
+        draw();
+        return;
+    }
+
+    // --- 以降は既存の処理 ---
     // ステージ選択画面
     if (gameState === GAME_STATE.STAGE_SELECT) {
         if (e.key === "ArrowUp") {
@@ -627,19 +643,9 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // ゲームプレイ中のキー操作
-    if (gameState !== GAME_STATE.PLAY) return;
-
-    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-    if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !player.isJumping) {
-        player.isJumping = true;
-        player.velocityY = -12;
-    }
-
-    // ゲームクリア・オーバー時のスペースキー
-    if (isGameClear || isGameOver) {
-        if (e.key === ' ') {
+    // ゲームクリア・オーバー時のエンターキーでリセットや次ステージ
+    if ((isGameClear || isGameOver) && gameState === GAME_STATE.PLAY) {
+        if (e.key === 'Enter') {
             if (isGameClear) {
                 if (selectedStageIndex < stages.length - 1) {
                     selectedStageIndex++;
@@ -653,6 +659,17 @@ document.addEventListener('keydown', (e) => {
                 gameState = GAME_STATE.PLAY;
             }
         }
+        return;
+    }
+
+    // ゲームプレイ中のキー操作
+    if (gameState !== GAME_STATE.PLAY) return;
+
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+    if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !player.isJumping) {
+        player.isJumping = true;
+        player.velocityY = -12;
     }
 });
 
