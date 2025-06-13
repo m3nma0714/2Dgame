@@ -88,10 +88,11 @@ const floatingEnemies = [
 
 // コインの設定
 const coins = [
-    { x: 250, y: 210, radius: 12, collected: false },
-    { x: 650, y: 40, radius: 12, collected: false },
-    { x: 950, y: 160, radius: 12, collected: false },
-    { x: 1400, y: 160, radius: 12, collected: false }
+    { x: 250, y: 210, radius: 12, collected: false, score: 10 },
+    { x: 650, y: 40, radius: 12, collected: false, score: 10 },
+    { x: 950, y: 160, radius: 12, collected: false, score: 10 },
+    { x: 1400, y: 160, radius: 12, collected: false, score: 10 },
+    { x: 800, y: 100, radius: 16, collected: false, score: 50 } // ★50点コイン追加
 ];
 
 // ゴールポールの設定
@@ -136,10 +137,10 @@ const stages = [
             { x: 1350, y: 180, width: 100, height: 20, color: 'brown' }
         ],
         coins: [
-            { x: 250, y: 210, radius: 12, collected: false },
-            { x: 650, y: 40, radius: 12, collected: false },
-            { x: 950, y: 160, radius: 12, collected: false },
-            { x: 1400, y: 160, radius: 12, collected: false }
+            { x: 250, y: 210, radius: 12, collected: false, score: 10 },
+            { x: 650, y: 40, radius: 12, collected: false, score: 10 },
+            { x: 950, y: 160, radius: 12, collected: false, score: 10 },
+            { x: 1400, y: 100, radius: 16, collected: false, score: 50 } // ★50点コイン追加
         ],
         enemy: {
             x: 300, y: 320, width: 40, height: 30, color: 'blue', speed: 3, direction: 1
@@ -167,16 +168,16 @@ const stages = [
         platforms: [
             { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
             { x: 300, y: 250, width: 100, height: 20, color: 'brown' },
-            { x: 600, y: 180, width: 100, height: 20, color: 'brown' },
-            { x: 900, y: 120, width: 100, height: 20, color: 'brown' },
-            { x: 1200, y: 80, width: 100, height: 20, color: 'brown' },
-            { x: 1500, y: 200, width: 100, height: 20, color: 'brown' }
+            { x: 550, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 840, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 1050, y: 80, width: 30, height: 20, color: 'brown' },
+            { x: 1300, y: 200, width: 30, height: 20, color: 'brown' }
         ],
         coins: [
-            { x: 350, y: 210, radius: 12, collected: false },
-            { x: 650, y: 140, radius: 12, collected: false },
-            { x: 950, y: 100, radius: 12, collected: false },
-            { x: 1550, y: 160, radius: 12, collected: false }
+            { x: 350, y: 210, radius: 12, collected: false, score: 10 },
+            { x: 600, y: 100, radius: 12, collected: false, score: 10 },
+            { x: 950, y: 100, radius: 12, collected: false, score: 10 },
+            { x: 1350, y: 160, radius: 16, collected: false, score: 50 }
         ],
         enemy: {
             x: 500, y: 320, width: 40, height: 30, color: 'blue', speed: 4, direction: 1
@@ -362,7 +363,7 @@ function update() {
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 if (distance < player.width / 2 + coin.radius) {
                     coin.collected = true;
-                    score += 10;
+                    score += coin.score || 10; // scoreプロパティがなければ10点
                 }
             }
         }
@@ -502,10 +503,16 @@ function draw() {
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
-                ctx.fillStyle = "gold";
+                if (coin.score === 50) {
+                    ctx.fillStyle = "deepskyblue"; // 50点コインは青色
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = "navy";
+                } else {
+                    ctx.fillStyle = "gold";
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = "orange";
+                }
                 ctx.fill();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = "orange";
                 ctx.stroke();
                 ctx.restore();
             }
@@ -653,6 +660,200 @@ document.addEventListener('keyup', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
     if (e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') keys.up = false;
 });
+
+// --- テストプレイ中のみ状態をlocalStorageに保存・復元する例 ---
+// ※本番公開時はこの機能を外してください
+
+// 状態保存
+function saveTestPlayState() {
+    const state = {
+        stage: selectedStageIndex,
+        score,
+        player: { ...player },
+        enemy: { ...enemy },
+        floatingEnemies: floatingEnemies.map(fe => ({ ...fe })),
+        coins: coins.map(c => ({ ...c })),
+        cameraX,
+        isGameClear,
+        isGameOver,
+        goalTouchY
+    };
+    localStorage.setItem('2dgame_test_state', JSON.stringify(state));
+}
+
+// 状態復元
+function loadTestPlayState() {
+    const state = JSON.parse(localStorage.getItem('2dgame_test_state'));
+    if (state) {
+        selectedStageIndex = state.stage;
+        loadStage(selectedStageIndex); // ステージ定義で初期化
+
+        score = state.score;
+        Object.assign(player, state.player);
+        Object.assign(enemy, state.enemy);
+        floatingEnemies.length = 0;
+        state.floatingEnemies.forEach(fe => floatingEnemies.push({ ...fe }));
+
+        // コインの位置や半径はステージ定義を使い、collectedだけ復元
+        for (let i = 0; i < coins.length; i++) {
+            if (state.coins[i]) {
+                coins[i].collected = state.coins[i].collected;
+            }
+        }
+
+        cameraX = state.cameraX;
+        isGameClear = state.isGameClear;
+        isGameOver = state.isGameOver;
+        goalTouchY = state.goalTouchY;
+        gameState = GAME_STATE.PLAY;
+    }
+}
+
+// ページ読み込み時に復元（テストプレイ時のみ）
+if (location.search.includes("test") || location.hash.includes("test")) {
+    window.addEventListener('DOMContentLoaded', loadTestPlayState);
+    // 1秒ごとに状態保存
+    setInterval(saveTestPlayState, 1000);
+}
+
+// ===== 仮想スティック・ジャンプボタンのUI生成 =====
+function createMobileControls() {
+    // すでに追加済みなら何もしない
+    if (document.getElementById('mobile-controls')) return;
+
+    const controls = document.createElement('div');
+    controls.id = 'mobile-controls';
+    controls.style.position = 'absolute';
+    controls.style.left = '0';
+    controls.style.top = '0';
+    controls.style.width = '100vw';
+    controls.style.height = '100vh';
+    controls.style.pointerEvents = 'none';
+    controls.style.zIndex = 10;
+
+    // 左スティック
+    const stickArea = document.createElement('div');
+    stickArea.style.position = 'absolute';
+    stickArea.style.left = '20px';
+    stickArea.style.bottom = '40px';
+    stickArea.style.width = '120px';
+    stickArea.style.height = '120px';
+    stickArea.style.borderRadius = '60px';
+    stickArea.style.background = 'rgba(0,0,0,0.1)';
+    stickArea.style.pointerEvents = 'auto';
+    stickArea.style.touchAction = 'none';
+
+    // スティックの中心
+    const stick = document.createElement('div');
+    stick.style.position = 'absolute';
+    stick.style.left = '40px';
+    stick.style.top = '40px';
+    stick.style.width = '40px';
+    stick.style.height = '40px';
+    stick.style.borderRadius = '20px';
+    stick.style.background = 'rgba(0,0,0,0.3)';
+    stickArea.appendChild(stick);
+
+    // ジャンプボタン
+    const jumpBtn = document.createElement('div');
+    jumpBtn.style.position = 'absolute';
+    jumpBtn.style.right = '40px';
+    jumpBtn.style.bottom = '70px';
+    jumpBtn.style.width = '70px';
+    jumpBtn.style.height = '70px';
+    jumpBtn.style.borderRadius = '35px';
+    jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+    jumpBtn.style.display = 'flex';
+    jumpBtn.style.alignItems = 'center';
+    jumpBtn.style.justifyContent = 'center';
+    jumpBtn.style.fontSize = '28px';
+    jumpBtn.style.color = '#fff';
+    jumpBtn.style.fontWeight = 'bold';
+    jumpBtn.style.pointerEvents = 'auto';
+    jumpBtn.innerText = 'JUMP';
+
+    controls.appendChild(stickArea);
+    controls.appendChild(jumpBtn);
+    document.body.appendChild(controls);
+
+    // --- 仮想スティックのタッチ操作 ---
+    let stickTouchId = null;
+    let stickStartX = 0;
+    let stickMoved = false;
+
+    stickArea.addEventListener('touchstart', function(e) {
+        const t = e.changedTouches[0];
+        stickTouchId = t.identifier;
+        stickStartX = t.clientX;
+        stickMoved = false;
+        keys.left = false;
+        keys.right = false;
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchmove', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                const dx = t.clientX - stickStartX;
+                if (dx < -20) {
+                    keys.left = true;
+                    keys.right = false;
+                    stickMoved = true;
+                } else if (dx > 20) {
+                    keys.right = true;
+                    keys.left = false;
+                    stickMoved = true;
+                } else {
+                    keys.left = false;
+                    keys.right = false;
+                }
+                // スティックの見た目を動かす
+                stick.style.left = (40 + Math.max(-40, Math.min(40, dx))) + 'px';
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchend', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                keys.left = false;
+                keys.right = false;
+                stick.style.left = '40px';
+                stickTouchId = null;
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // --- ジャンプボタンのタッチ操作 ---
+    jumpBtn.addEventListener('touchstart', function(e) {
+        keys.up = true;
+        // プレイヤーがジャンプ中でなければジャンプ
+        if (!player.isJumping && gameState === GAME_STATE.PLAY) {
+            player.isJumping = true;
+            player.velocityY = -12;
+        }
+        jumpBtn.style.background = 'rgba(255,180,0,1)';
+        e.preventDefault();
+    }, { passive: false });
+
+    jumpBtn.addEventListener('touchend', function(e) {
+        keys.up = false;
+        jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+        e.preventDefault();
+    }, { passive: false });
+}
+
+// --- スマホ・タブレットなら仮想コントローラーを表示 ---
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', createMobileControls);
+}
 
 // 6. ゲーム開始
 //------------------------------------
