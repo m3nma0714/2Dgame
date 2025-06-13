@@ -934,3 +934,25 @@ if (
 // 6. ゲーム開始
 //------------------------------------
 gameLoop(performance.now());
+
+// --- スマホ用：ゲームクリア・ゲームオーバー時に画面タップでリセット・次ステージ ---
+// 既存のcanvas.addEventListener('touchstart', ...)の下などに追加
+
+canvas.addEventListener('touchstart', function(e) {
+    // ゲームクリアまたはゲームオーバー時
+    if (gameState === GAME_STATE.PLAY && (isGameClear || isGameOver)) {
+        if (isGameClear) {
+            if (selectedStageIndex < stages.length - 1) {
+                selectedStageIndex++;
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+            } else {
+                gameState = GAME_STATE.TITLE;
+            }
+        } else {
+            resetGame();
+            gameState = GAME_STATE.PLAY;
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
