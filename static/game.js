@@ -881,6 +881,55 @@ canvas.addEventListener('touchstart', function(e) {
     }
 }, { passive: false });
 
+// --- スマホで強制横画面表示（画面回転ロック） ---
+// ※一部ブラウザではユーザー操作が必要な場合があります
+
+function forceLandscape() {
+    // 画面が縦長の場合は案内を表示
+    function checkOrientation() {
+        if (window.innerWidth < window.innerHeight) {
+            // 縦画面時の案内を表示
+            let overlay = document.getElementById('landscape-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'landscape-overlay';
+                overlay.style.position = 'fixed';
+                overlay.style.left = '0';
+                overlay.style.top = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.background = 'rgba(0,0,0,0.85)';
+                overlay.style.color = '#fff';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.zIndex = 9999;
+                overlay.style.fontSize = '2em';
+                overlay.innerHTML = '横画面でプレイしてください<br><span style="font-size:1em;">Please rotate your device</span>';
+                document.body.appendChild(overlay);
+            } else {
+                overlay.style.display = 'flex';
+            }
+        } else {
+            // 横画面なら案内を非表示
+            const overlay = document.getElementById('landscape-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+}
+
+// スマホ・タブレットなら横画面案内を有効化
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', forceLandscape);
+}
+
 // 6. ゲーム開始
 //------------------------------------
 gameLoop();
