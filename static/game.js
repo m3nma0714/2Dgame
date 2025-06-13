@@ -197,6 +197,46 @@ const stages = [
         goalPole: {
             x: 1700, y: 80, width: 16, height: 270, flagWidth: 40, flagHeight: 24
         }
+    },
+    {
+        name: "ステージ3",
+        platforms: [
+            { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
+            { x: 250, y: 270, width: 120, height: 20, color: 'brown' },
+            { x: 500, y: 200, width: 100, height: 20, color: 'brown' },
+            { x: 800, y: 150, width: 80, height: 20, color: 'brown' },
+            { x: 1100, y: 100, width: 60, height: 20, color: 'brown' },
+            { x: 1300, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 1500, y: 120, width: 80, height: 20, color: 'brown' },
+            { x: 1700, y: 80, width: 60, height: 20, color: 'brown' }
+        ],
+        coins: [
+            { x: 300, y: 230, radius: 12, collected: false, score: 10 },
+            { x: 550, y: 160, radius: 12, collected: false, score: 10 },
+            { x: 850, y: 110, radius: 12, collected: false, score: 10 },
+            { x: 1350, y: 140, radius: 12, collected: false, score: 10 },
+            { x: 1750, y: 40, radius: 16, collected: false, score: 50 } // 50点コイン
+        ],
+        enemy: {
+            x: 600, y: 320, width: 40, height: 30, color: 'blue', speed: 5, direction: 1
+        },
+        floatingEnemies: [
+            {
+                x: 700, y: 200, width: 30, height: 30, color: 'purple',
+                baseY: 200, amplitude: 120, speed: 0.008, phase: 0
+            },
+            {
+                x: 1200, y: 120, width: 30, height: 30, color: 'purple',
+                baseY: 120, amplitude: 100, speed: 0.009, phase: Math.PI / 2
+            },
+            {
+                x: 1600, y: 100, width: 30, height: 30, color: 'purple',
+                baseY: 100, amplitude: 80, speed: 0.01, phase: Math.PI
+            }
+        ],
+        goalPole: {
+            x: 1850, y: 80, width: 16, height: 270, flagWidth: 40, flagHeight: 24
+        }
     }
 ];
 let selectedStageIndex = 0;
