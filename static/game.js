@@ -1,5 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const thrower = { x: 0, y: 0, width: 0, height: 0, color: '', throwInterval: 120, throwTimer: 0 };
+const projectiles = [];
+
 
 // プレイヤーの初期設定
 const initialPlayerState = {
@@ -170,7 +173,7 @@ const stages = [
             { x: 300, y: 250, width: 100, height: 20, color: 'brown' },
             { x: 550, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 840, y: 180, width: 100, height: 20, color: 'brown' },
-            { x: 1050, y: 80, width: 30, height: 20, color: 'brown' },
+            { x: 800, y: 80, width: 30, height: 20, color: 'brown' },
             { x: 1300, y: 200, width: 30, height: 20, color: 'brown' },
             { x: 1500, y: 200, width: 30, height: 20, color: 'brown' },
             { x: 1600, y: 130, width: 20, height: 20, color: 'brown' }
@@ -203,8 +206,8 @@ const stages = [
         platforms: [
             { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
             { x: 250, y: 270, width: 120, height: 20, color: 'brown' },
-            { x: 500, y: 200, width: 100, height: 20, color: 'brown' },
-            { x: 800, y: 150, width: 80, height: 20, color: 'brown' },
+            { x: 500, y: 200, width: 120, height: 20, color: 'brown' },
+            { x: 750, y: 150, width: 150, height: 20, color: 'brown' },
             { x: 1100, y: 100, width: 60, height: 20, color: 'brown' },
             { x: 1300, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 1500, y: 120, width: 80, height: 20, color: 'brown' },
@@ -215,7 +218,7 @@ const stages = [
             { x: 550, y: 160, radius: 12, collected: false, score: 10 },
             { x: 850, y: 110, radius: 12, collected: false, score: 10 },
             { x: 1350, y: 140, radius: 12, collected: false, score: 10 },
-            { x: 1750, y: 40, radius: 16, collected: false, score: 50 } // 50点コイン
+            { x: 1750, y: 40, radius: 16, collected: false, score: 50 }
         ],
         enemy: {
             x: 600, y: 320, width: 40, height: 30, color: 'blue', speed: 5, direction: 1
@@ -234,13 +237,17 @@ const stages = [
                 baseY: 100, amplitude: 80, speed: 0.01, phase: Math.PI
             }
         ],
+        // 投擲敵の追加
+        thrower: {
+            x: 830, y: 65, width: 90, height: 90,  throwInterval: 230, throwTimer: 120
+        },
         goalPole: {
             x: 1850, y: 80, width: 16, height: 270, flagWidth: 40, flagHeight: 24
         }
     }
 ];
 let selectedStageIndex = 0;
-
+         
 // プレイヤー画像の読み込み
 const playerImg = new Image();
 playerImg.src = "static/player.png"; // 画像ファイルはstaticフォルダに配置してください
@@ -253,11 +260,28 @@ enemyImg.src = "static/enemy.png"; // staticフォルダにenemy.pngを配置
 const floatingEnemyImg = new Image();
 floatingEnemyImg.src = "static/floating_enemy.png"; // staticフォルダにfloating_enemy.pngを配置
 
+// --- 投擲物画像の読み込み ---
+const projectileImg = new Image();
+projectileImg.src = "static/projectile.png"; // staticフォルダにprojectile.pngを配置
+
+// --- 投擲者アニメーション用画像の読み込み ---
+const throwerImg = new Image();
+throwerImg.src = "static/thrower_spritesheet.png"; // 横並びのスプライトシート画像を用意
+
+// --- 投擲者アニメーション用のフレーム情報をグローバル変数に追加 ---
+thrower.frame = 0;
+thrower.frameCount = 25; // スプライトシートのコマ数に合わせて変更
+thrower.frameInterval = 23; // 何フレームごとに切り替えるか
+thrower.frameTimer = 0;
+
 // 現在のステージデータをセットする関数
 function loadStage(index) {
     const stage = stages[index];
     // プラットフォーム
     platforms.length = 0;
+    for (const p of stage.platforms) {
+        platforms.push({...p});
+    }
     stage.platforms.forEach(p => platforms.push({ ...p }));
     // コイン
     coins.length = 0;
@@ -273,6 +297,23 @@ function loadStage(index) {
     Object.assign(player, initialPlayerState);
     cameraX = 0;
     goalTouchY = null;
+    // 投擲敵
+    if (stage.thrower) {
+        Object.assign(thrower, stage.thrower);
+        // アニメーション用プロパティを必ずセット
+        thrower.frame = 0;
+        thrower.frameCount = 23;      // ←スプライトシートのコマ数
+        thrower.frameInterval = 10;
+        thrower.frameTimer = 240;
+    } else {
+        thrower.x = 0; thrower.y = 0; thrower.width = 0; thrower.height = 0; thrower.color = '';
+        thrower.throwInterval = 120; thrower.throwTimer = 0;
+        thrower.frame = 0;
+        thrower.frameCount = 24;
+        thrower.frameInterval = 10;
+        thrower.frameTimer = 0;
+    }
+    projectiles.length = 0;
 }
 
 // ステージ選択決定時・リセット時に呼ぶ
@@ -289,6 +330,10 @@ function resetGame() {
     score = 0;
     goalTouchY = null;
     gameState = GAME_STATE.PLAY;
+    // 投擲者のタイマーを0にリセット（ここで初期化）
+    if (selectedStageIndex === 2 && thrower.width > 0) {
+        thrower.throwTimer = thrower.throwInterval; // ← すぐ投げるためにinterval値で初期化
+    }
 }
 
 let isGameClear = false; // ゲームクリア状態を管理
@@ -428,6 +473,49 @@ function update(delta) {
                 let goalScore = Math.round(10 + ratio * 90);
                 score += goalScore;
                 isGameClear = true;
+            }
+        }
+
+        // ステージ3のみ投擲敵を動作
+        if (selectedStageIndex === 2 && thrower.width > 0) {
+            thrower.frameTimer++;
+            if (thrower.frameTimer >= thrower.frameInterval) {
+                thrower.frameTimer = 0;
+                thrower.frame = (thrower.frame + 1) % thrower.frameCount;
+            }
+            thrower.throwTimer++;
+            if (thrower.throwTimer >= thrower.throwInterval) {
+                thrower.throwTimer = 0;
+                // 投擲物を生成（左方向に投げる）
+                projectiles.push({
+                    x: thrower.x,
+                    y: thrower.y + thrower.height / 2,
+                    radius: 10,
+                    vx: -4,
+                    vy: -4,
+                    color: 'brown'
+                });
+            }
+        }
+        // 投擲物の移動
+        for (const p of projectiles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.2; // 投擲物の重力
+        }
+        // 画面外に出た投擲物を削除
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            if (projectiles[i].x > cameraX + SCREEN_WIDTH || projectiles[i].y > SCREEN_HEIGHT) {
+                projectiles.splice(i, 1);
+            }
+        }
+        // 投擲物とプレイヤーの当たり判定
+        for (const p of projectiles) {
+            const dx = (player.x + player.width / 2) - p.x;
+            const dy = (player.y + player.height / 2) - p.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < player.width / 2 + p.radius) {
+                isGameOver = true;
             }
         }
     }
@@ -588,6 +676,60 @@ function draw() {
         }
         ctx.restore();
 
+        // --- 投擲敵の描画（ステージ3のみ） ---
+        if (selectedStageIndex === 2 && thrower.width > 0) {
+            if (throwerImg.complete && throwerImg.naturalWidth !== 0) {
+                // 1コマの幅は小数のまま
+                const spriteWidth = 13800 / 23;
+                const spriteHeight = 510;
+                const extra = 100;
+                const sx = spriteWidth * thrower.frame;
+                const scale = 1; // 拡大率
+
+                const drawWidth = thrower.width * scale;
+                const drawHeight = thrower.height * scale;
+
+                // --- ここで微調整 ---
+                const offsetX = 0; // 右に30pxずらす（必要に応じて調整）
+                const offsetY = 0; // 上に20pxずらす（必要に応じて調整）
+
+                const drawX = thrower.x + thrower.width / 2 - drawWidth / 2 + offsetX;
+                const drawY = thrower.y + thrower.height - drawHeight + offsetY;
+                
+                ctx.drawImage(
+                    throwerImg,
+                    sx, 0,
+                    spriteWidth, spriteHeight,
+                    drawX, drawY,
+                    drawWidth, drawHeight
+                );
+            } else {
+                // 画像が読み込めない場合のみ四角形で描画
+                ctx.fillStyle = thrower.color;
+                ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+            }
+        }
+
+        // --- 投擲物の描画 ---
+        for (const p of projectiles) {
+            if (projectileImg.complete && projectileImg.naturalWidth !== 0) {
+                ctx.drawImage(
+                    projectileImg,
+                    p.x - p.radius,
+                    p.y - p.radius,
+                    p.radius * 2,
+                    p.radius * 2
+                );
+            } else {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                ctx.strokeStyle = "#333";
+                ctx.stroke();
+            }
+        }
+
         ctx.restore();
 
         // ゲームクリア時に文字を表示
@@ -670,15 +812,17 @@ document.addEventListener('keydown', (e) => {
     if (gameState === GAME_STATE.STAGE_SELECT) {
         if (e.key === "ArrowUp") {
             selectedStageIndex = (selectedStageIndex - 1 + stages.length) % stages.length;
-            draw(); // 画面を即時更新
+            draw();
+            return;
         }
         if (e.key === "ArrowDown") {
             selectedStageIndex = (selectedStageIndex + 1) % stages.length;
-            draw(); // 画面を即時更新
+            draw();
+            return;
         }
         if (e.key === "Enter") {
-            resetGame(); // ステージデータをロードしてゲーム開始
-            gameState = GAME_STATE.PLAY;
+            resetGame(); // これだけでOK
+            return;
         }
         return;
     }
@@ -991,6 +1135,7 @@ if (
 // 6. ゲーム開始
 //------------------------------------
 gameLoop(performance.now());
+
 
 // --- スマホ用：ゲームクリア・ゲームオーバー時に画面タップでリセット・次ステージ ---
 // 既存のcanvas.addEventListener('touchstart', ...)の下などに追加
