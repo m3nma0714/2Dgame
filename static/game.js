@@ -206,12 +206,12 @@ const stages = [
         platforms: [
             { x: 0, y: 350, width: 2000, height: 50, color: 'green' },
             { x: 250, y: 270, width: 120, height: 20, color: 'brown' },
-            { x: 500, y: 200, width: 120, height: 20, color: 'brown' },
-            { x: 750, y: 150, width: 150, height: 20, color: 'brown' },
-            { x: 1100, y: 100, width: 60, height: 20, color: 'brown' },
-            { x: 1300, y: 180, width: 100, height: 20, color: 'brown' },
-            { x: 1500, y: 120, width: 80, height: 20, color: 'brown' },
-            { x: 1700, y: 80, width: 60, height: 20, color: 'brown' }
+            { x: 500, y: 200, width: 100, height: 20, color: 'brown' },
+            { x: 750, y: 150, width: 120, height: 20, color: 'brown' },
+            { x: 1060, y: 150, width: 60, height: 20, color: 'brown' },
+            { x: 1330, y: 180, width: 100, height: 20, color: 'brown' },
+            { x: 1570, y: 120, width: 20, height: 20, color: 'brown' },
+            { x: 1740, y: 80, width: 10, height: 20, color: 'brown' }
         ],
         coins: [
             { x: 300, y: 230, radius: 12, collected: false, score: 10 },
@@ -226,24 +226,29 @@ const stages = [
         floatingEnemies: [
             {
                 x: 700, y: 200, width: 30, height: 30, color: 'purple',
-                baseY: 200, amplitude: 120, speed: 0.008, phase: 0
+                baseY: 200, amplitude: 120, speed: 0.01, phase: 0
             },
             {
                 x: 1200, y: 120, width: 30, height: 30, color: 'purple',
                 baseY: 120, amplitude: 100, speed: 0.009, phase: Math.PI / 2
             },
             {
-                x: 1600, y: 100, width: 30, height: 30, color: 'purple',
+                x: 1650, y: 100, width: 30, height: 30, color: 'purple',
                 baseY: 100, amplitude: 80, speed: 0.01, phase: Math.PI
             }
         ],
         // 投擲敵の追加
         thrower: {
-            x: 830, y: 65, width: 90, height: 90,  throwInterval: 230, throwTimer: 120
+            x: 220, y: 5, width: 90, height: 90,  throwInterval: 230, throwTimer: 120
         },
         goalPole: {
-            x: 1850, y: 80, width: 16, height: 270, flagWidth: 40, flagHeight: 24
-        }
+            x: 1850, y: 80, width: 80, height: 270, flagWidth: 40, flagHeight: 24
+        },
+        trees: [
+            { x: 220, y: 40, width: 100, height: 280, trunkColor: "#8B5A2B", leafColor: "#228B22" },
+            { x: 920, y: 40, width: 100, height: 280, trunkColor: "#8B5A2B", leafColor: "#228B22" },
+            { x: 1450, y: 40, width: 100, height: 280, trunkColor: "#8B5A2B", leafColor: "#228B22" }
+        ]
     }
 ];
 let selectedStageIndex = 0;
@@ -330,10 +335,52 @@ function resetGame() {
     score = 0;
     goalTouchY = null;
     gameState = GAME_STATE.PLAY;
-    // 投擲者のタイマーを0にリセット（ここで初期化）
+    // 投擲者のタイマーをリセット
     if (selectedStageIndex === 2 && thrower.width > 0) {
-        thrower.throwTimer = thrower.throwInterval; // ← すぐ投げるためにinterval値で初期化
+        thrower.throwTimer = 0;      // ← ここを0に
+        thrower.frameTimer = 0;      // ← ここも0に
+        thrower.frame = 0;
     }
+}
+
+// ステージ選択やリセット時
+function resetStage(stageIndex) {
+    // プラットフォーム
+    platforms.length = 0;
+    for (const p of stages[stageIndex].platforms) {
+        platforms.push({...p});
+    }
+    stages[stageIndex].platforms.forEach(p => platforms.push({ ...p }));
+    // コイン
+    coins.length = 0;
+    stages[stageIndex].coins.forEach(c => coins.push({ ...c }));
+    // 敵
+    Object.assign(enemy, stages[stageIndex].enemy);
+    // 浮遊敵
+    floatingEnemies = stages[stageIndex].floatingEnemies.map(e => ({ ...e })); // ディープコピー
+    // ゴール
+    Object.assign(goalPole, stages[stageIndex].goalPole);
+    // プレイヤー初期位置
+    Object.assign(player, initialPlayerState);
+    cameraX = 0;
+    goalTouchY = null;
+    // 投擲敵
+    if (stages[stageIndex].thrower) {
+        Object.assign(thrower, stages[stageIndex].thrower);
+        // アニメーション用プロパティを必ずセット
+        thrower.frame = 0;
+        thrower.frameCount = 23;      // ←スプライトシートのコマ数
+        thrower.frameInterval = 10;
+        thrower.frameTimer = 120;
+    } else {
+        thrower.x = 0; thrower.y = 0; thrower.width = 0; thrower.height = 0; thrower.color = '';
+        thrower.throwInterval = 120; thrower.throwTimer = 0;
+        thrower.frame = 0;
+        thrower.frameCount = 24;
+        thrower.frameInterval = 10;
+        thrower.frameTimer = 0;
+    }
+    projectiles.length = 0;
 }
 
 let isGameClear = false; // ゲームクリア状態を管理
@@ -488,11 +535,11 @@ function update(delta) {
                 thrower.throwTimer = 0;
                 // 投擲物を生成（左方向に投げる）
                 projectiles.push({
-                    x: thrower.x,
-                    y: thrower.y + thrower.height / 2,
+                    x: thrower.x + thrower.width,
+                    y: thrower.y + thrower.height / 2.5,
                     radius: 10,
-                    vx: -4,
-                    vy: -4,
+                    vx: 6,
+                    vy: -3,
                     color: 'brown'
                 });
             }
@@ -564,9 +611,34 @@ function draw() {
     }
 
     if (gameState === GAME_STATE.PLAY) {
-        // カメラの位置を考慮して描画
         ctx.save();
         ctx.translate(-cameraX, 0);
+
+        // --- ステージごとの木の描画 ---
+        const trees = stages[selectedStageIndex].trees || [];
+        for (const tree of trees) {
+            const trunkWidth = 50;
+
+            // 葉
+            ctx.beginPath();
+            ctx.arc(
+                tree.x + tree.width / 2, // 幹の中心に合わせる
+                tree.y,                  // 葉の中心y
+                tree.width / 1.5,          // 半径
+                0, Math.PI * 2
+            );
+            ctx.fillStyle = tree.leafColor;
+            ctx.fill();
+
+            // 幹
+            ctx.fillStyle = tree.trunkColor;
+            ctx.fillRect(
+                tree.x + tree.width / 2 - trunkWidth / 2, // 幹の中心を葉の中心に合わせる
+                tree.y + tree.width / 2,                  // 幹のy
+                trunkWidth,                               // 幹の幅
+                tree.height                               // 幹の高さ
+            );
+        }
 
         // プレイヤー画像描画
         if (playerImg.complete && playerImg.naturalWidth !== 0) {
@@ -682,31 +754,38 @@ function draw() {
                 // 1コマの幅は小数のまま
                 const spriteWidth = 13800 / 23;
                 const spriteHeight = 510;
-                const extra = 100;
                 const sx = spriteWidth * thrower.frame;
-                const scale = 1; // 拡大率
+                const scale = 1;
 
                 const drawWidth = thrower.width * scale;
                 const drawHeight = thrower.height * scale;
 
-                // --- ここで微調整 ---
-                const offsetX = 0; // 右に30pxずらす（必要に応じて調整）
-                const offsetY = 0; // 上に20pxずらす（必要に応じて調整）
+                // 幅・高さの中心を基準に反転
+                ctx.save();
+                const centerX = thrower.x + thrower.width / 2;
+                const centerY = thrower.y + thrower.height / 2;
+                ctx.translate(centerX, centerY);
+                ctx.scale(-1, 1); // 左右反転
+                ctx.translate(-centerX, -centerY);
 
-                const drawX = thrower.x + thrower.width / 2 - drawWidth / 2 + offsetX;
-                const drawY = thrower.y + thrower.height - drawHeight + offsetY;
-                
                 ctx.drawImage(
                     throwerImg,
                     sx, 0,
                     spriteWidth, spriteHeight,
-                    drawX, drawY,
+                    thrower.x, thrower.y,
                     drawWidth, drawHeight
                 );
+                ctx.restore();
             } else {
-                // 画像が読み込めない場合のみ四角形で描画
+                // 画像が読み込めない場合のみ四角形で描画（反転も適用）
+                ctx.save();
+                const centerX = thrower.x + thrower.width / 2;
+                ctx.translate(centerX, thrower.y);
+                ctx.scale(-1, 1);
+                ctx.translate(-centerX, -thrower.y);
                 ctx.fillStyle = thrower.color;
                 ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+                ctx.restore();
             }
         }
 
@@ -1158,3 +1237,57 @@ canvas.addEventListener('touchstart', function(e) {
         e.preventDefault();
     }
 }, { passive: false });
+
+// --- 木オブジェクト（当たり判定なし） ---
+const trees = [
+    { x: 320, y: 300, width: 50, height: 80, trunkColor: "#8B5A2B", leafColor: "#228B22" },
+    { x: 700, y: 320, width: 60, height: 90, trunkColor: "#8B5A2B", leafColor: "#2E8B57" },
+    // 必要に応じて追加
+];
+
+// ゲーム開始時やリセット時
+thrower.throwTimer = -20; // ← マイナス値にすることで60フレーム後に投げ始める
+
+// 投擲者の描画部分
+function drawThrower() {
+    ctx.save();
+    // 反転したいx座標（中心）を計算
+    const centerX = thrower.x + thrower.width / 2;
+    ctx.translate(centerX, thrower.y);
+    ctx.scale(-1, 1); // 左右反転
+    ctx.translate(-centerX, -thrower.y);
+
+    // 通常通り描画
+    ctx.fillStyle = thrower.color;
+    ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+
+    ctx.restore();
+}
+
+// 投擲物を生成する処理
+function throwProjectile() {
+    const projectile = {
+        x: thrower.x + thrower.width, // 右端から
+        y: thrower.y + thrower.height / 2,
+        width: 16,
+        height: 16,
+        color: 'gray',
+        speed: 6 // 右向き
+    };
+    projectiles.push(projectile);
+}
+
+// 投擲物の更新
+function updateProjectiles() {
+    for (const projectile of projectiles) {
+        projectile.x += projectile.speed;
+    }
+}
+
+// 投擲物の描画
+function drawProjectiles() {
+    for (const projectile of projectiles) {
+        ctx.fillStyle = projectile.color;
+        ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+    }
+}
