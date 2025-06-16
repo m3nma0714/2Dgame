@@ -1475,7 +1475,7 @@ canvas.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
     // タイトル画面でエンターキーを押したらゲームスタート
-    if (gameState === GAME_STATE.TITLE && e.key === " " || e.key === "spacebar" || e.key === "space" || e.key === "Enter") {
+    if (gameState === GAME_STATE.TITLE && e.key === " " || e.key === "spacebar" || e.key === "space") {
         gameState = GAME_STATE.STAGE_SELECT;
         draw();
         return;
@@ -1524,7 +1524,7 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
     if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-    if ((e.key === 'ArrowUp' || e.key === 'w' || e.key === ' ') && !player.isJumping) {
+    if ((e.key === 'ArrowUp' || e.key === ' ') && !player.isJumping) {
         player.isJumping = true;
         player.velocityY = -12;
     }
