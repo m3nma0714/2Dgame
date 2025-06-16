@@ -588,7 +588,7 @@ function draw() {
         ctx.strokeStyle = "#333";
         ctx.strokeRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2, 200, 60);
         ctx.fillStyle = "#333";
-        ctx.fillText("ゲームスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 42);
+        ctx.fillText("スタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 42);
         return;
     }
 
@@ -880,7 +880,7 @@ canvas.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
     // タイトル画面でエンターキーを押したらゲームスタート
-    if (gameState === GAME_STATE.TITLE && e.key === "Enter") {
+    if (gameState === GAME_STATE.TITLE && e.key === " " || e.key === "spacebar" || e.key === "space" || e.key === "Enter") {
         gameState = GAME_STATE.STAGE_SELECT;
         draw();
         return;
