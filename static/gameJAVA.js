@@ -875,21 +875,22 @@ let menuSelectedIndex = 0; // 追加: メニューの選択中インデックス
 // --- メニュー画面のボタン領域 ---
 const menuButtons = [
     { 
-        label: "ステージ選択へ戻る", 
-        action: () => { 
-            gameState = GAME_STATE.TITLE; 
-            isMenuOpen = false; 
-            draw(); // 画面を即時更新
-        } 
-    },
-    { 
         label: "リトライ", 
         action: () => { 
             gameState = GAME_STATE.STAGE_SELECT; 
             isMenuOpen = false; 
             draw(); // 画面を即時更新
         } 
+    },
+    { 
+        label: "ステージ選択へ戻る", 
+        action: () => { 
+            gameState = GAME_STATE.TITLE; 
+            isMenuOpen = false; 
+            draw(); // 画面を即時更新
+        } 
     }
+    
 ];
 
 // --- メニュー画面の描画 ---
