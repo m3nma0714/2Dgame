@@ -173,7 +173,7 @@ const stages = [
             { x: 300, y: 250, width: 100, height: 20, color: 'brown' },
             { x: 550, y: 180, width: 100, height: 20, color: 'brown' },
             { x: 840, y: 180, width: 100, height: 20, color: 'brown' },
-            { x: 800, y: 80, width: 30, height: 20, color: 'brown' },
+            { x: 1050, y: 80, width: 30, height: 20, color: 'brown' },
             { x: 1300, y: 200, width: 30, height: 20, color: 'brown' },
             { x: 1500, y: 200, width: 30, height: 20, color: 'brown' },
             { x: 1600, y: 130, width: 20, height: 20, color: 'brown' }
@@ -242,7 +242,7 @@ const stages = [
             x: 220, y: 5, width: 90, height: 90,  throwInterval: 230, throwTimer: 120
         },
         goalPole: {
-            x: 1850, y: 80, width: 80, height: 270, flagWidth: 40, flagHeight: 24
+            x: 1850, y: 80, width: 16, height: 270, flagWidth: 40, flagHeight: 24
         },
         trees: [
             { x: 220, y: 40, width: 100, height: 280, trunkColor: "#8B5A2B", leafColor: "#228B22" },
@@ -606,7 +606,7 @@ function draw() {
         }
         ctx.font = "20px sans-serif";
         ctx.fillStyle = "#666";
-        ctx.fillText("↑↓で選択、Enterで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
+        ctx.fillText("WorSで選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
         return;
     }
 
@@ -820,9 +820,9 @@ function draw() {
             ctx.font = "24px sans-serif";
             ctx.fillStyle = "white";
             if (selectedStageIndex < stages.length - 1) {
-                ctx.fillText("enterキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("Rキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             } else {
-                ctx.fillText("enterキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("Rキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             }
             // ゴールスコア表示
             if (goalTouchY !== null) {
@@ -850,7 +850,7 @@ function draw() {
 
             ctx.font = "28px sans-serif";
             ctx.fillStyle = "white";
-            ctx.fillText("enterキー または 画面タップでリスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 60);
+            ctx.fillText("Rキー または 画面タップでリスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 60);
         }
 
         // スコア表示（画面左上固定）
@@ -889,17 +889,17 @@ document.addEventListener('keydown', (e) => {
     // --- 以降は既存の処理 ---
     // ステージ選択画面
     if (gameState === GAME_STATE.STAGE_SELECT) {
-        if (e.key === "ArrowUp") {
+        if (e.key === "w" || e.key === "W") {
             selectedStageIndex = (selectedStageIndex - 1 + stages.length) % stages.length;
             draw();
             return;
         }
-        if (e.key === "ArrowDown") {
+        if (e.key === "s" || e.key === "S") {
             selectedStageIndex = (selectedStageIndex + 1) % stages.length;
             draw();
             return;
         }
-        if (e.key === "Enter") {
+        if (e.key === " " || e.key === "spacebar" || e.key === "space") {
             resetGame(); // これだけでOK
             return;
         }
@@ -908,7 +908,7 @@ document.addEventListener('keydown', (e) => {
 
     // ゲームクリア・オーバー時のエンターキーでリセットや次ステージ
     if ((isGameClear || isGameOver) && gameState === GAME_STATE.PLAY) {
-        if (e.key === 'Enter') {
+        if (e.key === 'r' || e.key === 'R') {
             if (isGameClear) {
                 if (selectedStageIndex < stages.length - 1) {
                     selectedStageIndex++;
