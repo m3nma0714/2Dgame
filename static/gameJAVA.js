@@ -883,7 +883,7 @@ const menuButtons = [
         } 
     },
     { 
-        label: "ステージリセット", 
+        label: "リトライ", 
         action: () => { 
             gameState = GAME_STATE.STAGE_SELECT; 
             isMenuOpen = false; 
