@@ -927,6 +927,12 @@ function drawMenu() {
         ctx.fillStyle = "#222";
         ctx.fillText(menuButtons[i].label, SCREEN_WIDTH / 2, btnY + 34);
     }
+
+    // 追加: ESCで閉じる案内
+    ctx.font = "20px sans-serif";
+    ctx.fillStyle = "#eee";
+    ctx.fillText("ESCを再度押してメニューを閉じる", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 140);
+
     ctx.restore();
 }
 
