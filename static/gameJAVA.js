@@ -1189,7 +1189,7 @@ function draw() {
         }
         ctx.font = "20px sans-serif";
         ctx.fillStyle = "#666";
-        ctx.fillText("WorSで選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
+        ctx.fillText("'W'or'S'で選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
         return;
     }
 
