@@ -1410,9 +1410,9 @@ function draw() {
             ctx.font = "24px sans-serif";
             ctx.fillStyle = "white";
             if (selectedStageIndex < stages.length - 1) {
-                ctx.fillText("Rキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("spaceキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             } else {
-                ctx.fillText("Rキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+                ctx.fillText("spaceキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
             }
             // ゴールスコア表示
             if (goalTouchY !== null) {
@@ -1500,10 +1500,11 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // ゲームクリア・オーバー時のエンターキーでリセットや次ステージ
-    if ((isGameClear || isGameOver) && gameState === GAME_STATE.PLAY) {
-        if (e.key === 'r' || e.key === 'R') {
-            if (isGameClear) {
+    // --- ゲームクリア・オーバー時のキー処理を分岐 ---
+    if (gameState === GAME_STATE.PLAY) {
+        // ゲームクリア時はスペースキーで次ステージまたはタイトルへ
+        if (isGameClear) {
+            if (e.key === " " || e.key === "spacebar" || e.key === "space") {
                 if (selectedStageIndex < stages.length - 1) {
                     selectedStageIndex++;
                     resetGame();
@@ -1511,12 +1512,17 @@ document.addEventListener('keydown', (e) => {
                 } else {
                     gameState = GAME_STATE.TITLE;
                 }
-            } else {
+            }
+            return;
+        }
+        // ゲームオーバー時はRキーでリスタート
+        if (isGameOver) {
+            if (e.key === 'r' || e.key === 'R') {
                 resetGame();
                 gameState = GAME_STATE.PLAY;
             }
+            return;
         }
-        return;
     }
 
     // ゲームプレイ中のキー操作
