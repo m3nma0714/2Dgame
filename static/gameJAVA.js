@@ -511,58 +511,15 @@ function update(delta) {
             player.y + player.height > goalPole.y &&
             player.y < goalPole.y + goalPole.height
         ) {
-            if (!isGameClear) {
+            if (!isGameClear && !isGoalAnimation) {
+                // ゴール演出開始
+                startGoalAnimation();
                 // 触れた高さを記録（ポールの上端を0とした相対値）
                 goalTouchY = player.y + player.height - goalPole.y;
                 // スコア加算（高い位置ほど高得点）
-                // ポールの上端: 100点, 下端: 10点
                 let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
                 let goalScore = Math.round(10 + ratio * 90);
                 score += goalScore;
-                isGameClear = true;
-            }
-        }
-
-        // ステージ3のみ投擲敵を動作
-        if (selectedStageIndex === 2 && thrower.width > 0) {
-            thrower.frameTimer++;
-            if (thrower.frameTimer >= thrower.frameInterval) {
-                thrower.frameTimer = 0;
-                thrower.frame = (thrower.frame + 1) % thrower.frameCount;
-            }
-            thrower.throwTimer++;
-            if (thrower.throwTimer >= thrower.throwInterval) {
-                thrower.throwTimer = 0;
-                // 投擲物を生成（左方向に投げる）
-                projectiles.push({
-                    x: thrower.x + thrower.width,
-                    y: thrower.y + thrower.height / 2.5,
-                    radius: 10,
-                    vx: 6,
-                    vy: -3,
-                    color: 'brown'
-                });
-            }
-        }
-        // 投擲物の移動
-        for (const p of projectiles) {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2; // 投擲物の重力
-        }
-        // 画面外に出た投擲物を削除
-        for (let i = projectiles.length - 1; i >= 0; i--) {
-            if (projectiles[i].x > cameraX + SCREEN_WIDTH || projectiles[i].y > SCREEN_HEIGHT) {
-                projectiles.splice(i, 1);
-            }
-        }
-        // 投擲物とプレイヤーの当たり判定
-        for (const p of projectiles) {
-            const dx = (player.x + player.width / 2) - p.x;
-            const dy = (player.y + player.height / 2) - p.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < player.width / 2 + p.radius) {
-                isGameOver = true;
             }
         }
     }
@@ -866,6 +823,1026 @@ function draw() {
     if (isMenuOpen) {
         drawMenu();
     }
+
+    // クリア画面
+    if (isGameClear) {
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.globalAlpha = 1.0;
+        ctx.font = "48px sans-serif";
+        ctx.fillStyle = "#28a745";
+        ctx.textAlign = "center";
+        ctx.fillText("クリア！", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 40);
+        ctx.font = "32px sans-serif";
+        ctx.fillStyle = "#333";
+        ctx.fillText(`スコア: ${score}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+        ctx.font = "24px sans-serif";
+        ctx.fillText("スペースキーで次へ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 70);
+        ctx.restore();
+    }
+}
+
+// --- メニュー画面の状態管理 ---
+// let isMenuOpen = false; // ← 既に宣言済みなので削除
+
+// --- メニュー画面のボタン領域 ---
+/* Duplicate menuButtons declaration removed. See below for the single definition. */
+
+// --- メニュー画面の描画 ---
+function drawMenu() {
+    // 画面を半透明で覆う
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    ctx.restore();
+
+    // メニュー枠
+    ctx.save();
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 4;
+    ctx.fillRect(SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT / 2 - 120, 360, 240);
+    ctx.strokeRect(SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT / 2 - 120, 360, 240);
+
+    // タイトル
+    ctx.font = "32px sans-serif";
+    ctx.fillStyle = "#333";
+    ctx.textAlign = "center";
+    ctx.fillText("メニュー", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 60);
+
+    // ボタン
+    ctx.font = "28px sans-serif";
+    for (let i = 0; i < menuButtons.length; i++) {
+        const btnY = SCREEN_HEIGHT / 2 - 10 + i * 60;
+        // 選択中のボタンを黄色く
+        ctx.fillStyle = (i === menuSelectedIndex) ? "#FFD700" : "#eee";
+        ctx.fillRect(SCREEN_WIDTH / 2 - 120, btnY, 240, 48);
+        ctx.strokeStyle = "#888";
+        ctx.strokeRect(SCREEN_WIDTH / 2 - 120, btnY, 240, 48);
+        ctx.fillStyle = "#222";
+        ctx.fillText(menuButtons[i].label, SCREEN_WIDTH / 2, btnY + 34);
+    }
+
+    // 追加: ESCで閉じる案内
+    ctx.font = "20px sans-serif";
+    ctx.fillStyle = "#eee";
+    ctx.fillText("ESCを再度押してメニューを閉じる", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 140);
+
+    ctx.restore();
+}
+
+// --- メニュー画面のボタン判定 ---
+function handleMenuClick(mx, my) {
+    for (let i = 0; i < menuButtons.length; i++) {
+        const btnY = SCREEN_HEIGHT / 2 - 10 + i * 60;
+        if (
+            mx >= SCREEN_WIDTH / 2 - 120 && mx <= SCREEN_WIDTH / 2 + 120 &&
+            my >= btnY && my <= btnY + 48
+        ) {
+            menuSelectedIndex = i;
+            menuButtons[i].action();
+            return true;
+        }
+    }
+    return false;
+}
+
+// --- ESCキーでメニューの開閉 & メニュー操作 ---
+document.addEventListener('keydown', (e) => {
+    // ...既存のkeydown処理...
+
+    // ゲームプレイ中のみESCでメニュー開閉
+    if (gameState === GAME_STATE.PLAY && e.key === "Escape") {
+        isMenuOpen = !isMenuOpen;
+        // メニューを開いたら選択をリセット
+        if (isMenuOpen) {
+            menuSelectedIndex = 0;
+        }
+        draw();
+        return;
+    }
+
+    // メニュー画面中の操作
+    if (isMenuOpen) {
+        if (e.key === "w" || e.key === "ArrowUp") {
+            menuSelectedIndex = (menuSelectedIndex - 1 + menuButtons.length) % menuButtons.length;
+            draw();
+            return;
+        }
+        if (e.key === "s" || e.key === "ArrowDown") {
+            menuSelectedIndex = (menuSelectedIndex + 1) % menuButtons.length;
+            draw();
+            return;
+        }
+        if (e.key === " " || e.key === "Enter" || e.key === "spacebar" || e.key === "space") {
+            menuButtons[menuSelectedIndex].action();
+            draw();
+            return;
+        }
+        return;
+    }
+
+    // --- ゲームクリア・オーバー時のキー処理を分岐 ---
+    if (gameState === GAME_STATE.PLAY) {
+        // ゲームクリア時はスペースキーで次ステージまたはタイトルへ
+        if (isGameClear) {
+            if (e.key === " " || e.key === "spacebar" || e.key === "space") {
+                if (selectedStageIndex < stages.length - 1) {
+                    selectedStageIndex++;
+                    resetGame();
+                    gameState = GAME_STATE.PLAY;
+                } else {
+                    gameState = GAME_STATE.TITLE;
+                }
+            }
+            return;
+        }
+        // ゲームオーバー時はRキーでリスタート
+        if (isGameOver) {
+            if (e.key === 'r' || e.key === 'R') {
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+            }
+            return;
+        }
+    }
+
+    // ゲームプレイ中のキー操作
+    if (gameState !== GAME_STATE.PLAY) return;
+
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+    if ((e.key === 'ArrowUp' || e.key === ' ') && !player.isJumping) {
+        player.isJumping = true;
+        player.velocityY = -12;
+    }
+});
+
+// キーを離したときの処理（移動し続けるバグ対策）
+document.addEventListener('keyup', (e) => {
+    if (gameState !== GAME_STATE.PLAY) return;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    if (e.key === 'ArrowUp' || e.key === ' ') keys.up = false;
+});
+
+// --- テストプレイ中のみ状態をlocalStorageに保存・復元する例 ---
+// ※本番公開時はこの機能を外してください
+
+// 状態保存
+function saveTestPlayState() {
+    const state = {
+        stage: selectedStageIndex,
+        score,
+        player: { ...player },
+        enemy: { ...enemy },
+        floatingEnemies: floatingEnemies.map(fe => ({ ...fe })),
+        coins: coins.map(c => ({ ...c })),
+        cameraX,
+        isGameClear,
+        isGameOver,
+        goalTouchY
+    };
+    localStorage.setItem('2dgame_test_state', JSON.stringify(state));
+}
+
+// 状態復元
+function loadTestPlayState() {
+    const state = JSON.parse(localStorage.getItem('2dgame_test_state'));
+    if (state) {
+        selectedStageIndex = state.stage;
+        loadStage(selectedStageIndex); // ステージ定義で初期化
+
+        score = state.score;
+        Object.assign(player, state.player);
+        Object.assign(enemy, state.enemy);
+        floatingEnemies.length = 0;
+        state.floatingEnemies.forEach(fe => floatingEnemies.push({ ...fe }));
+
+        // コインの位置や半径はステージ定義を使い、collectedだけ復元
+        for (let i = 0; i < coins.length; i++) {
+            if (state.coins[i]) {
+                coins[i].collected = state.coins[i].collected;
+            }
+        }
+
+        cameraX = state.cameraX;
+        isGameClear = state.isGameClear;
+        isGameOver = state.isGameOver;
+        goalTouchY = state.goalTouchY;
+        gameState = GAME_STATE.PLAY;
+    }
+}
+
+// ページ読み込み時に復元（テストプレイ時のみ）
+if (location.search.includes("test") || location.hash.includes("test")) {
+    window.addEventListener('DOMContentLoaded', loadTestPlayState);
+    // 1秒ごとに状態保存
+    setInterval(saveTestPlayState, 1000);
+}
+
+// ===== 仮想スティック・ジャンプボタンのUI生成 =====
+function createMobileControls() {
+    // すでに追加済みなら何もしない
+    if (document.getElementById('mobile-controls')) return;
+
+    const controls = document.createElement('div');
+    controls.id = 'mobile-controls';
+    controls.style.position = 'absolute';
+    controls.style.left = '0';
+    controls.style.top = '0';
+    controls.style.width = '100vw';
+    controls.style.height = '100vh';
+    controls.style.pointerEvents = 'none';
+    controls.style.zIndex = 10;
+
+    // 左スティック
+    const stickArea = document.createElement('div');
+    stickArea.style.position = 'absolute';
+    stickArea.style.left = '20px';
+    stickArea.style.bottom = '40px';
+    stickArea.style.width = '120px';
+    stickArea.style.height = '120px';
+    stickArea.style.borderRadius = '60px';
+    stickArea.style.background = 'rgba(0,0,0,0.1)';
+    stickArea.style.pointerEvents = 'auto';
+    stickArea.style.touchAction = 'none';
+
+    // スティックの中心
+    const stick = document.createElement('div');
+    stick.style.position = 'absolute';
+    stick.style.left = '40px';
+    stick.style.top = '40px';
+    stick.style.width = '40px';
+    stick.style.height = '40px';
+    stick.style.borderRadius = '20px';
+    stick.style.background = 'rgba(0,0,0,0.3)';
+    stickArea.appendChild(stick);
+
+    // ジャンプボタン
+    const jumpBtn = document.createElement('div');
+    jumpBtn.style.position = 'absolute';
+    jumpBtn.style.right = '40px';
+    jumpBtn.style.bottom = '70px';
+    jumpBtn.style.width = '70px';
+    jumpBtn.style.height = '70px';
+    jumpBtn.style.borderRadius = '35px';
+    jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+    jumpBtn.style.display = 'flex';
+    jumpBtn.style.alignItems = 'center';
+    jumpBtn.style.justifyContent = 'center';
+    jumpBtn.style.fontSize = '28px';
+    jumpBtn.style.color = '#fff';
+    jumpBtn.style.fontWeight = 'bold';
+    jumpBtn.style.pointerEvents = 'auto';
+    jumpBtn.innerText = 'JUMP';
+
+    controls.appendChild(stickArea);
+    controls.appendChild(jumpBtn);
+    document.body.appendChild(controls);
+
+    // --- 仮想スティックのタッチ操作 ---
+    let stickTouchId = null;
+    let stickStartX = 0;
+    let stickMoved = false;
+
+    stickArea.addEventListener('touchstart', function(e) {
+        const t = e.changedTouches[0];
+        stickTouchId = t.identifier;
+        stickStartX = t.clientX;
+        stickMoved = false;
+        keys.left = false;
+        keys.right = false;
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchmove', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                const dx = t.clientX - stickStartX;
+                if (dx < -20) {
+                    keys.left = true;
+                    keys.right = false;
+                    stickMoved = true;
+                } else if (dx > 20) {
+                    keys.right = true;
+                    keys.left = false;
+                    stickMoved = true;
+                } else {
+                    keys.left = false;
+                    keys.right = false;
+                }
+                // スティックの見た目を動かす
+                stick.style.left = (40 + Math.max(-40, Math.min(40, dx))) + 'px';
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchend', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                keys.left = false;
+                keys.right = false;
+                stick.style.left = '40px';
+                stickTouchId = null;
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // --- ジャンプボタンのタッチ操作 ---
+    jumpBtn.addEventListener('touchstart', function(e) {
+        keys.up = true;
+        // プレイヤーがジャンプ中でなければジャンプ
+        if (!player.isJumping && gameState === GAME_STATE.PLAY) {
+            player.isJumping = true;
+            player.velocityY = -12;
+        }
+        jumpBtn.style.background = 'rgba(255,180,0,1)';
+        e.preventDefault();
+    }, { passive: false });
+
+    jumpBtn.addEventListener('touchend', function(e) {
+        keys.up = false;
+        jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+        e.preventDefault();
+    }, { passive: false });
+}
+
+// --- スマホ・タブレットなら仮想コントローラーを表示 ---
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', createMobileControls);
+}
+
+// ステージ選択画面でのタッチ操作
+canvas.addEventListener('touchstart', function(e) {
+    if (gameState === GAME_STATE.STAGE_SELECT) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const tx = touch.clientX - rect.left;
+        const ty = touch.clientY - rect.top;
+
+        // ステージ名の表示位置と同じY座標範囲を判定
+        for (let i = 0; i < stages.length; i++) {
+            const stageY = 200 + i * 60;
+            if (ty > stageY - 30 && ty < stageY + 30) {
+                selectedStageIndex = i;
+                draw();
+                // すぐにゲーム開始
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+                break;
+            }
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- スマホで強制横画面表示（画面回転ロック） ---
+// ※一部ブラウザではユーザー操作が必要な場合があります
+
+function forceLandscape() {
+    // 画面が縦長の場合は案内を表示
+    function checkOrientation() {
+        if (window.innerWidth < window.innerHeight) {
+            // 縦画面時の案内を表示
+            let overlay = document.getElementById('landscape-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'landscape-overlay';
+                overlay.style.position = 'fixed';
+                overlay.style.left = '0';
+                overlay.style.top = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.background = 'rgba(0,0,0,0.85)';
+                overlay.style.color = '#fff';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.zIndex = 9999;
+                overlay.style.fontSize = '2em';
+                overlay.innerHTML = '横画面でプレイしてください<br><span style="font-size:1em;">Please rotate your device</span>';
+                document.body.appendChild(overlay);
+            } else {
+                overlay.style.display = 'flex';
+            }
+        } else {
+            // 横画面なら案内を非表示
+            const overlay = document.getElementById('landscape-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+}
+
+// スマホ・タブレットなら横画面案内を有効化
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', forceLandscape);
+}
+
+// 6. ゲーム開始
+//------------------------------------
+gameLoop(performance.now());
+
+
+// --- スマホ用：ゲームクリア・ゲームオーバー時に画面タップでリセット・次ステージ ---
+// 既存のcanvas.addEventListener('touchstart', ...)の下などに追加
+
+canvas.addEventListener('touchstart', function(e) {
+    // ゲームクリアまたはゲームオーバー時
+    if (gameState === GAME_STATE.PLAY && (isGameClear || isGameOver)) {
+        if (isGameClear) {
+            if (selectedStageIndex < stages.length - 1) {
+                selectedStageIndex++;
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+            } else {
+                gameState = GAME_STATE.TITLE;
+            }
+        } else {
+            resetGame();
+            gameState = GAME_STATE.PLAY;
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- 木オブジェクト（当たり判定なし） ---
+// ※ ステージごとのtreesはstages配列内で定義されています
+
+// ゲーム開始時やリセット時
+thrower.throwTimer = -20; // ← マイナス値にすることで60フレーム後に投げ始める
+
+// 投擲者の描画部分
+function drawThrower() {
+    ctx.save();
+    // 反転したいx座標（中心）を計算
+    const centerX = thrower.x + thrower.width / 2;
+    ctx.translate(centerX, thrower.y);
+    ctx.scale(-1, 1); // 左右反転
+    ctx.translate(-centerX, -thrower.y);
+
+    // 通常通り描画
+    ctx.fillStyle = thrower.color;
+    ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+
+    ctx.restore();
+}
+
+// 投擲物を生成する処理
+function throwProjectile() {
+    const projectile = {
+        x: thrower.x + thrower.width, // 右端から
+        y: thrower.y + thrower.height / 2,
+        width: 16,
+        height: 16,
+        color: 'gray',
+        speed: 6 // 右向き
+    };
+    projectiles.push(projectile);
+}
+
+// 投擲物の更新
+function updateProjectiles() {
+    for (const projectile of projectiles) {
+        projectile.x += projectile.speed;
+    }
+}
+
+// 投擲物の描画
+function drawProjectiles() {
+    for (const projectile of projectiles) {
+        ctx.fillStyle = projectile.color;
+        ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+    }
+}
+
+// --- ゴール演出用の状態 ---
+// let isGoalAnimation = false; // ← ここは削除（重複宣言防止）
+// ※ ここは削除（重複宣言防止）: goalAnimPhase, goalAnimTimer, goalStartY
+
+// ゴール判定時に呼ぶ
+function startGoalAnimation() {
+    isGoalAnimation = true;
+    goalAnimPhase = 0;
+    goalAnimTimer = 0;
+    goalStartY = player.y;
+    player.velocityX = 0;
+    player.velocityY = 0;
+}
+
+// --- ゴール演出進行 ---
+function updateGoalAnimation() {
+    switch (goalAnimPhase) {
+        case 0: // ポールを下がる
+            if (player.y < goalPole.y + goalPole.height - player.height) {
+                player.y += 3;
+            } else {
+                player.y = goalPole.y + goalPole.height - player.height;
+                goalAnimTimer = 0;
+                goalAnimPhase = 1;
+            }
+            break;
+        case 1: // 右へ歩く
+            if (goalAnimTimer < 60) { // 1秒ほど歩く
+                player.x += 3;
+                goalAnimTimer++;
+            } else {
+                goalAnimPhase = 2;
+                goalAnimTimer = 0;
+            }
+            break;
+        case 2: // 停止
+            goalAnimTimer++;
+            if (goalAnimTimer > 30) { // 少し待つ
+                goalAnimPhase = 3;
+            }
+            break;
+        case 3: // クリア画面表示
+            isGameClear = true;
+            isGoalAnimation = false;
+            break;
+    }
+}
+
+// --- ゴール判定部分で演出開始 ---
+function checkGoal() {
+    if (
+        player.x + player.width > goalPole.x &&
+        player.x < goalPole.x + goalPole.width &&
+        player.y + player.height > goalPole.y &&
+        player.y < goalPole.y + goalPole.height
+    ) {
+        if (!isGoalAnimation && !isGameClear) {
+            startGoalAnimation();
+        }
+    }
+}
+
+// --- メインのupdate関数内で分岐 ---
+function update(delta) {
+    if (isMenuOpen) return; // メニュー中は何もしない
+
+    // ゴール演出中は通常更新を止めて演出だけ進める
+    if (isGoalAnimation) {
+        updateGoalAnimation();
+        return;
+    }
+
+    if (gameState === GAME_STATE.PLAY) {
+        if (isGameClear || isGameOver) return;
+
+        if (keys.right) {
+            player.velocityX = player.speed * delta * 60;
+        } else if (keys.left) {
+            player.velocityX = -player.speed * delta * 60;
+        } else {
+            player.velocityX = 0;
+        }
+
+        // プレイヤーの位置を更新
+        player.x += player.velocityX;
+        player.y += player.velocityY * delta * 60;
+        player.velocityY += gravity * delta * 60;
+
+        // プレイヤーが画面外に出ないように制限
+        // スクロールを考慮し、カメラ位置と画面幅で制限
+        if (player.x < cameraX) player.x = cameraX;
+        // ステージの右端（地面の右端）で止める
+        const stageRight = Math.max(...platforms.map(p => p.x + p.width));
+        if (player.x + player.width > stageRight) player.x = stageRight - player.width;
+
+        // カメラのスクロール処理
+        // プレイヤーが画面中央より右に来たらカメラを右に動かす
+        const centerX = cameraX + SCREEN_WIDTH / 2;
+        if (player.x > centerX) {
+            cameraX = player.x - SCREEN_WIDTH / 2;
+        }
+        // 左端で止める（必要なら）
+        if (cameraX < 0) cameraX = 0;
+
+        // 当たり判定
+        let onPlatform = false;
+        for (const platform of platforms) {
+            if (
+                player.x < platform.x + platform.width &&
+                player.x + player.width > platform.x &&
+                player.y + player.height > platform.y &&
+                player.y + player.height < platform.y + platform.height + player.velocityY
+            ) {
+                player.y = platform.y - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+                onPlatform = true;
+
+                // 紫色のブロックの上に乗ったらゲームクリア
+                if (platform.color === 'purple') {
+                    isGameClear = true;
+                }
+            }
+        }
+
+        // 敵の移動（地面の範囲で左右に往復）
+        enemy.x += enemy.speed * enemy.direction;
+        if (enemy.x < 0 || enemy.x + enemy.width > 1600) { // ステージを右に伸ばす場合は範囲も拡大
+            enemy.direction *= -1;
+        }
+
+        // 浮遊敵の上下移動
+        for (const fe of floatingEnemies) {
+            fe.y = fe.baseY + Math.sin(performance.now() * fe.speed + fe.phase) * fe.amplitude;
+        }
+
+        // 敵との当たり判定（AABB）
+        if (
+            player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y
+        ) {
+            isGameOver = true;
+        }
+
+        // 浮遊敵との当たり判定
+        for (const fe of floatingEnemies) {
+            if (
+                player.x < fe.x + fe.width &&
+                player.x + player.width > fe.x &&
+                player.y < fe.y + fe.height &&
+                player.y + player.height > fe.y
+            ) {
+                isGameOver = true;
+            }
+        }
+
+        // コインの取得判定
+        for (const coin of coins) {
+            if (!coin.collected) {
+                const dx = (player.x + player.width / 2) - (coin.x + coin.radius);
+                const dy = (player.y + player.height / 2) - (coin.y + coin.radius);
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < player.width / 2 + coin.radius) {
+                    coin.collected = true;
+                    score += coin.score || 10; // scoreプロパティがなければ10点
+                }
+            }
+        }
+
+        // ゴールポール判定
+        // プレイヤーがポールに触れたか
+        if (
+            player.x + player.width > goalPole.x &&
+            player.x < goalPole.x + goalPole.width &&
+            player.y + player.height > goalPole.y &&
+            player.y < goalPole.y + goalPole.height
+        ) {
+            if (!isGameClear && !isGoalAnimation) {
+                // ゴール演出開始
+                startGoalAnimation();
+                // 触れた高さを記録（ポールの上端を0とした相対値）
+                goalTouchY = player.y + player.height - goalPole.y;
+                // スコア加算（高い位置ほど高得点）
+                let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
+                let goalScore = Math.round(10 + ratio * 90);
+                score += goalScore;
+            }
+        }
+    }
+    // タイトル画面やステージ選択画面では何もしない
+}
+
+// 5. 描画処理
+//------------------------------------
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (gameState === GAME_STATE.TITLE) {
+        // タイトル画面
+        ctx.font = "48px sans-serif";
+        ctx.fillStyle = "navy";
+        ctx.textAlign = "center";
+        ctx.fillText("2Dアクションゲーム", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 40);
+
+        // スタートボタン
+        ctx.font = "32px sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2, 200, 60);
+        ctx.strokeStyle = "#333";
+        ctx.strokeRect(SCREEN_WIDTH / 2 - 100, SCREEN_HEIGHT / 2, 200, 60);
+        ctx.fillStyle = "#333";
+        ctx.fillText("スタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 42);
+        return;
+    }
+
+    if (gameState === GAME_STATE.STAGE_SELECT) {
+        // ステージ選択画面
+        ctx.font = "40px sans-serif";
+        ctx.fillStyle = "navy";
+        ctx.textAlign = "center";
+        ctx.fillText("ステージ選択", SCREEN_WIDTH / 2, 100);
+
+        ctx.font = "28px sans-serif";
+        for (let i = 0; i < stages.length; i++) {
+            ctx.fillStyle = i === selectedStageIndex ? "#FFD700" : "#333";
+            ctx.fillText(stages[i].name, SCREEN_WIDTH / 2, 200 + i * 60);
+        }
+        ctx.font = "20px sans-serif";
+        ctx.fillStyle = "#666";
+        ctx.fillText("WorSで選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
+        return;
+    }
+
+    if (gameState === GAME_STATE.PLAY) {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // --- ステージごとの木の描画 ---
+        const trees = stages[selectedStageIndex].trees || [];
+        for (const tree of trees) {
+            const trunkWidth = 50;
+
+            // 葉
+            ctx.beginPath();
+            ctx.arc(
+                tree.x + tree.width / 2, // 幹の中心に合わせる
+                tree.y,                  // 葉の中心y
+                tree.width / 1.5,          // 半径
+                0, Math.PI * 2
+            );
+            ctx.fillStyle = tree.leafColor;
+            ctx.fill();
+
+            // 幹
+            ctx.fillStyle = tree.trunkColor;
+            ctx.fillRect(
+                tree.x + tree.width / 2 - trunkWidth / 2, // 幹の中心を葉の中心に合わせる
+                tree.y + tree.width / 2,                  // 幹のy
+                trunkWidth,                               // 幹の幅
+                tree.height                               // 幹の高さ
+            );
+        }
+
+        // プレイヤー画像描画
+        if (playerImg.complete && playerImg.naturalWidth !== 0) {
+            ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+        } else {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        // 地面を歩く敵画像描画（画像の比率に合わせてサイズ調整＋向き反転対応）
+        if (enemyImg.complete && enemyImg.naturalWidth !== 0) {
+            const aspect = enemyImg.naturalWidth / enemyImg.naturalHeight;
+            let drawWidth = enemy.height * aspect;
+            let drawHeight = enemy.height;
+            let drawX = enemy.x + (enemy.width - drawWidth) / 2;
+            let drawY = enemy.y;
+
+            ctx.save();
+            if (enemy.direction > 0) {
+                // 右向きのときは画像を左右反転
+                ctx.translate(drawX + drawWidth / 2, drawY + drawHeight / 2);
+                ctx.scale(-1, 1);
+                ctx.drawImage(
+                    enemyImg,
+                    -drawWidth / 2,
+                    -drawHeight / 2,
+                    drawWidth,
+                    drawHeight
+                );
+            } else {
+                // 左向き（通常）のとき
+                ctx.translate(drawX, drawY);
+                ctx.drawImage(enemyImg, 0, 0, drawWidth, drawHeight);
+            }
+            ctx.restore();
+        } else {
+            ctx.fillStyle = enemy.color;
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+
+        // 浮遊敵を画像で描画（画像の比率に合わせてサイズ調整）
+        for (const fe of floatingEnemies) {
+            if (floatingEnemyImg.complete && floatingEnemyImg.naturalWidth !== 0) {
+                const aspect = floatingEnemyImg.naturalWidth / floatingEnemyImg.naturalHeight;
+                let drawWidth = fe.height * aspect;
+                let drawHeight = fe.height;
+                let drawX = fe.x + (fe.width - drawWidth) / 2;
+                let drawY = fe.y;
+                ctx.drawImage(floatingEnemyImg, drawX, drawY, drawWidth, drawHeight);
+            } else {
+                ctx.fillStyle = fe.color;
+                ctx.fillRect(fe.x, fe.y, fe.width, fe.height);
+            }
+        }
+
+        // ステージを描画
+        for (const platform of platforms) {
+            ctx.fillStyle = platform.color;
+            ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        }
+
+        // コインを描画
+        for (const coin of coins) {
+            if (!coin.collected) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(coin.x, coin.y, coin.radius, 0, Math.PI * 2);
+                if (coin.score === 50) {
+                    ctx.fillStyle = "deepskyblue"; // 50点コインは青色
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = "navy";
+                } else {
+                    ctx.fillStyle = "gold";
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = "orange";
+                }
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // ゴールポールを描画
+        ctx.save();
+        // ポール
+        ctx.fillStyle = "#888";
+        ctx.fillRect(goalPole.x, goalPole.y, goalPole.width, goalPole.height);
+        // ポールの上の丸
+        ctx.beginPath();
+        ctx.arc(goalPole.x + goalPole.width / 2, goalPole.y, goalPole.width / 2, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFD700";
+        ctx.fill();
+        // 旗
+        let flagY = goalPole.y + (goalTouchY !== null ? goalTouchY - goalPole.flagHeight / 2 : 0);
+        if (isGameClear && goalTouchY !== null) {
+            // クリア時は触れた高さに旗を移動
+            ctx.fillStyle = "#f33";
+            ctx.fillRect(goalPole.x + goalPole.width, flagY, goalPole.flagWidth, goalPole.flagHeight);
+            ctx.strokeStyle = "#c00";
+            ctx.strokeRect(goalPole.x + goalPole.width, flagY, goalPole.flagWidth, goalPole.flagHeight);
+        } else {
+            // 通常は一番上に旗
+            ctx.fillStyle = "#f33";
+            ctx.fillRect(goalPole.x + goalPole.width, goalPole.y, goalPole.flagWidth, goalPole.flagHeight);
+            ctx.strokeStyle = "#c00";
+            ctx.strokeRect(goalPole.x + goalPole.width, goalPole.y, goalPole.flagWidth, goalPole.flagHeight);
+        }
+        ctx.restore();
+
+        // --- 投擲敵の描画（ステージ3のみ） ---
+        if (selectedStageIndex === 2 && thrower.width > 0) {
+            if (throwerImg.complete && throwerImg.naturalWidth !== 0) {
+                // 1コマの幅は小数のまま
+                const spriteWidth = 13800 / 23;
+                const spriteHeight = 510;
+                const sx = spriteWidth * thrower.frame;
+                const scale = 1;
+
+                const drawWidth = thrower.width * scale;
+                const drawHeight = thrower.height * scale;
+
+                // 幅・高さの中心を基準に反転
+                ctx.save();
+                const centerX = thrower.x + thrower.width / 2;
+                const centerY = thrower.y + thrower.height / 2;
+                ctx.translate(centerX, centerY);
+                ctx.scale(-1, 1); // 左右反転
+                ctx.translate(-centerX, -centerY);
+
+                ctx.drawImage(
+                    throwerImg,
+                    sx, 0,
+                    spriteWidth, spriteHeight,
+                    thrower.x, thrower.y,
+                    drawWidth, drawHeight
+                );
+                ctx.restore();
+            } else {
+                // 画像が読み込めない場合のみ四角形で描画（反転も適用）
+                ctx.save();
+                const centerX = thrower.x + thrower.width / 2;
+                ctx.translate(centerX, thrower.y);
+                ctx.scale(-1, 1);
+                ctx.translate(-centerX, -thrower.y);
+                ctx.fillStyle = thrower.color;
+                ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+                ctx.restore();
+            }
+        }
+
+        // --- 投擲物の描画 ---
+        for (const p of projectiles) {
+            if (projectileImg.complete && projectileImg.naturalWidth !== 0) {
+                ctx.drawImage(
+                    projectileImg,
+                    p.x - p.radius,
+                    p.y - p.radius,
+                    p.radius * 2,
+                    p.radius * 2
+                );
+            } else {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                ctx.strokeStyle = "#333";
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+
+        // ゲームクリア時に文字を表示
+        if (isGameClear) {
+            ctx.font = "48px sans-serif";
+            ctx.fillStyle = "gold";
+            ctx.textAlign = "center";
+            ctx.fillText("ゲームクリア！", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+            ctx.font = "24px sans-serif";
+            ctx.fillStyle = "white";
+            if (selectedStageIndex < stages.length - 1) {
+                ctx.fillText("Rキーで次のステージへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+            } else {
+                ctx.fillText("Rキーでタイトルへ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 50);
+            }
+            // ゴールスコア表示
+            if (goalTouchY !== null) {
+                let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
+                let goalScore = Math.round(10 + ratio * 90);
+                ctx.fillStyle = "gold";
+                ctx.fillText(`ゴールボーナス: +${goalScore}点`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 90);
+            }
+        }
+
+        // ゲームオーバー時に画面を暗転＋文字を表示
+        if (isGameOver) {
+            // 画面全体を半透明の黒で覆う（カメラ位置を考慮せず画面全体に）
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            ctx.restore();
+
+            // 文字を大きく・中央に表示（カメラ位置を加えず、画面中央に固定）
+            ctx.font = "bold 60px sans-serif";
+            ctx.fillStyle = "red";
+            ctx.textAlign = "center";
+            ctx.fillText("ゲームオーバー", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+
+            ctx.font = "28px sans-serif";
+            ctx.fillStyle = "white";
+            ctx.fillText("Rキー または 画面タップでリスタート", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 60);
+        }
+
+        // スコア表示（画面左上固定）
+        ctx.save();
+        ctx.font = "24px sans-serif";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "left";
+        ctx.fillText(`スコア: ${score}`, 20, 40);
+        ctx.restore();
+    }
+
+    // --- メニュー画面が開いていれば最前面に描画 ---
+    if (isMenuOpen) {
+        drawMenu();
+    }
+
+    // クリア画面
+    if (isGameClear) {
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        ctx.globalAlpha = 1.0;
+        ctx.font = "48px sans-serif";
+        ctx.fillStyle = "#28a745";
+        ctx.textAlign = "center";
+        ctx.fillText("クリア！", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 40);
+        ctx.font = "32px sans-serif";
+        ctx.fillStyle = "#333";
+        ctx.fillText(`スコア: ${score}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 20);
+        ctx.font = "24px sans-serif";
+        ctx.fillText("スペースキーで次へ", SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 70);
+        ctx.restore();
+    }
 }
 
 // --- メニュー画面の状態管理 ---
@@ -988,12 +1965,471 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // ...既存のキー処理...
+    // --- ゲームクリア・オーバー時のキー処理を分岐 ---
+    if (gameState === GAME_STATE.PLAY) {
+        // ゲームクリア時はスペースキーで次ステージまたはタイトルへ
+        if (isGameClear) {
+            if (e.key === " " || e.key === "spacebar" || e.key === "space") {
+                if (selectedStageIndex < stages.length - 1) {
+                    selectedStageIndex++;
+                    resetGame();
+                    gameState = GAME_STATE.PLAY;
+                } else {
+                    gameState = GAME_STATE.TITLE;
+                }
+            }
+            return;
+        }
+        // ゲームオーバー時はRキーでリスタート
+        if (isGameOver) {
+            if (e.key === 'r' || e.key === 'R') {
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+            }
+            return;
+        }
+    }
+
+    // ゲームプレイ中のキー操作
+    if (gameState !== GAME_STATE.PLAY) return;
+
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+    if ((e.key === 'ArrowUp' || e.key === ' ') && !player.isJumping) {
+        player.isJumping = true;
+        player.velocityY = -12;
+    }
 });
 
-// --- メニュー画面中はゲーム更新を止める ---
+// キーを離したときの処理（移動し続けるバグ対策）
+document.addEventListener('keyup', (e) => {
+    if (gameState !== GAME_STATE.PLAY) return;
+    if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+    if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+    if (e.key === 'ArrowUp' || e.key === ' ') keys.up = false;
+});
+
+// --- テストプレイ中のみ状態をlocalStorageに保存・復元する例 ---
+// ※本番公開時はこの機能を外してください
+
+// 状態保存
+function saveTestPlayState() {
+    const state = {
+        stage: selectedStageIndex,
+        score,
+        player: { ...player },
+        enemy: { ...enemy },
+        floatingEnemies: floatingEnemies.map(fe => ({ ...fe })),
+        coins: coins.map(c => ({ ...c })),
+        cameraX,
+        isGameClear,
+        isGameOver,
+        goalTouchY
+    };
+    localStorage.setItem('2dgame_test_state', JSON.stringify(state));
+}
+
+// 状態復元
+function loadTestPlayState() {
+    const state = JSON.parse(localStorage.getItem('2dgame_test_state'));
+    if (state) {
+        selectedStageIndex = state.stage;
+        loadStage(selectedStageIndex); // ステージ定義で初期化
+
+        score = state.score;
+        Object.assign(player, state.player);
+        Object.assign(enemy, state.enemy);
+        floatingEnemies.length = 0;
+        state.floatingEnemies.forEach(fe => floatingEnemies.push({ ...fe }));
+
+        // コインの位置や半径はステージ定義を使い、collectedだけ復元
+        for (let i = 0; i < coins.length; i++) {
+            if (state.coins[i]) {
+                coins[i].collected = state.coins[i].collected;
+            }
+        }
+
+        cameraX = state.cameraX;
+        isGameClear = state.isGameClear;
+        isGameOver = state.isGameOver;
+        goalTouchY = state.goalTouchY;
+        gameState = GAME_STATE.PLAY;
+    }
+}
+
+// ページ読み込み時に復元（テストプレイ時のみ）
+if (location.search.includes("test") || location.hash.includes("test")) {
+    window.addEventListener('DOMContentLoaded', loadTestPlayState);
+    // 1秒ごとに状態保存
+    setInterval(saveTestPlayState, 1000);
+}
+
+// ===== 仮想スティック・ジャンプボタンのUI生成 =====
+function createMobileControls() {
+    // すでに追加済みなら何もしない
+    if (document.getElementById('mobile-controls')) return;
+
+    const controls = document.createElement('div');
+    controls.id = 'mobile-controls';
+    controls.style.position = 'absolute';
+    controls.style.left = '0';
+    controls.style.top = '0';
+    controls.style.width = '100vw';
+    controls.style.height = '100vh';
+    controls.style.pointerEvents = 'none';
+    controls.style.zIndex = 10;
+
+    // 左スティック
+    const stickArea = document.createElement('div');
+    stickArea.style.position = 'absolute';
+    stickArea.style.left = '20px';
+    stickArea.style.bottom = '40px';
+    stickArea.style.width = '120px';
+    stickArea.style.height = '120px';
+    stickArea.style.borderRadius = '60px';
+    stickArea.style.background = 'rgba(0,0,0,0.1)';
+    stickArea.style.pointerEvents = 'auto';
+    stickArea.style.touchAction = 'none';
+
+    // スティックの中心
+    const stick = document.createElement('div');
+    stick.style.position = 'absolute';
+    stick.style.left = '40px';
+    stick.style.top = '40px';
+    stick.style.width = '40px';
+    stick.style.height = '40px';
+    stick.style.borderRadius = '20px';
+    stick.style.background = 'rgba(0,0,0,0.3)';
+    stickArea.appendChild(stick);
+
+    // ジャンプボタン
+    const jumpBtn = document.createElement('div');
+    jumpBtn.style.position = 'absolute';
+    jumpBtn.style.right = '40px';
+    jumpBtn.style.bottom = '70px';
+    jumpBtn.style.width = '70px';
+    jumpBtn.style.height = '70px';
+    jumpBtn.style.borderRadius = '35px';
+    jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+    jumpBtn.style.display = 'flex';
+    jumpBtn.style.alignItems = 'center';
+    jumpBtn.style.justifyContent = 'center';
+    jumpBtn.style.fontSize = '28px';
+    jumpBtn.style.color = '#fff';
+    jumpBtn.style.fontWeight = 'bold';
+    jumpBtn.style.pointerEvents = 'auto';
+    jumpBtn.innerText = 'JUMP';
+
+    controls.appendChild(stickArea);
+    controls.appendChild(jumpBtn);
+    document.body.appendChild(controls);
+
+    // --- 仮想スティックのタッチ操作 ---
+    let stickTouchId = null;
+    let stickStartX = 0;
+    let stickMoved = false;
+
+    stickArea.addEventListener('touchstart', function(e) {
+        const t = e.changedTouches[0];
+        stickTouchId = t.identifier;
+        stickStartX = t.clientX;
+        stickMoved = false;
+        keys.left = false;
+        keys.right = false;
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchmove', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                const dx = t.clientX - stickStartX;
+                if (dx < -20) {
+                    keys.left = true;
+                    keys.right = false;
+                    stickMoved = true;
+                } else if (dx > 20) {
+                    keys.right = true;
+                    keys.left = false;
+                    stickMoved = true;
+                } else {
+                    keys.left = false;
+                    keys.right = false;
+                }
+                // スティックの見た目を動かす
+                stick.style.left = (40 + Math.max(-40, Math.min(40, dx))) + 'px';
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    stickArea.addEventListener('touchend', function(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            const t = e.changedTouches[i];
+            if (t.identifier === stickTouchId) {
+                keys.left = false;
+                keys.right = false;
+                stick.style.left = '40px';
+                stickTouchId = null;
+            }
+        }
+        e.preventDefault();
+    }, { passive: false });
+
+    // --- ジャンプボタンのタッチ操作 ---
+    jumpBtn.addEventListener('touchstart', function(e) {
+        keys.up = true;
+        // プレイヤーがジャンプ中でなければジャンプ
+        if (!player.isJumping && gameState === GAME_STATE.PLAY) {
+            player.isJumping = true;
+            player.velocityY = -12;
+        }
+        jumpBtn.style.background = 'rgba(255,180,0,1)';
+        e.preventDefault();
+    }, { passive: false });
+
+    jumpBtn.addEventListener('touchend', function(e) {
+        keys.up = false;
+        jumpBtn.style.background = 'rgba(255,180,0,0.7)';
+        e.preventDefault();
+    }, { passive: false });
+}
+
+// --- スマホ・タブレットなら仮想コントローラーを表示 ---
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', createMobileControls);
+}
+
+// ステージ選択画面でのタッチ操作
+canvas.addEventListener('touchstart', function(e) {
+    if (gameState === GAME_STATE.STAGE_SELECT) {
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const tx = touch.clientX - rect.left;
+        const ty = touch.clientY - rect.top;
+
+        // ステージ名の表示位置と同じY座標範囲を判定
+        for (let i = 0; i < stages.length; i++) {
+            const stageY = 200 + i * 60;
+            if (ty > stageY - 30 && ty < stageY + 30) {
+                selectedStageIndex = i;
+                draw();
+                // すぐにゲーム開始
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+                break;
+            }
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- スマホで強制横画面表示（画面回転ロック） ---
+// ※一部ブラウザではユーザー操作が必要な場合があります
+
+function forceLandscape() {
+    // 画面が縦長の場合は案内を表示
+    function checkOrientation() {
+        if (window.innerWidth < window.innerHeight) {
+            // 縦画面時の案内を表示
+            let overlay = document.getElementById('landscape-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'landscape-overlay';
+                overlay.style.position = 'fixed';
+                overlay.style.left = '0';
+                overlay.style.top = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.background = 'rgba(0,0,0,0.85)';
+                overlay.style.color = '#fff';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                overlay.style.zIndex = 9999;
+                overlay.style.fontSize = '2em';
+                overlay.innerHTML = '横画面でプレイしてください<br><span style="font-size:1em;">Please rotate your device</span>';
+                document.body.appendChild(overlay);
+            } else {
+                overlay.style.display = 'flex';
+            }
+        } else {
+            // 横画面なら案内を非表示
+            const overlay = document.getElementById('landscape-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+    }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
+}
+
+// スマホ・タブレットなら横画面案内を有効化
+if (
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    && typeof window.ontouchstart !== "undefined"
+) {
+    window.addEventListener('DOMContentLoaded', forceLandscape);
+}
+
+// 6. ゲーム開始
+//------------------------------------
+gameLoop(performance.now());
+
+
+// --- スマホ用：ゲームクリア・ゲームオーバー時に画面タップでリセット・次ステージ ---
+// 既存のcanvas.addEventListener('touchstart', ...)の下などに追加
+
+canvas.addEventListener('touchstart', function(e) {
+    // ゲームクリアまたはゲームオーバー時
+    if (gameState === GAME_STATE.PLAY && (isGameClear || isGameOver)) {
+        if (isGameClear) {
+            if (selectedStageIndex < stages.length - 1) {
+                selectedStageIndex++;
+                resetGame();
+                gameState = GAME_STATE.PLAY;
+            } else {
+                gameState = GAME_STATE.TITLE;
+            }
+        } else {
+            resetGame();
+            gameState = GAME_STATE.PLAY;
+        }
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- 木オブジェクト（当たり判定なし） ---
+/* 
+// const trees = [...] は削除しました。
+// ステージごとの木は stages 配列内の trees プロパティで管理されています。
+*/
+
+// ゲーム開始時やリセット時
+thrower.throwTimer = -20; // ← マイナス値にすることで60フレーム後に投げ始める
+
+// 投擲者の描画部分
+function drawThrower() {
+    ctx.save();
+    // 反転したいx座標（中心）を計算
+    const centerX = thrower.x + thrower.width / 2;
+    ctx.translate(centerX, thrower.y);
+    ctx.scale(-1, 1); // 左右反転
+    ctx.translate(-centerX, -thrower.y);
+
+    // 通常通り描画
+    ctx.fillStyle = thrower.color;
+    ctx.fillRect(thrower.x, thrower.y, thrower.width, thrower.height);
+
+    ctx.restore();
+}
+
+// 投擲物を生成する処理
+function throwProjectile() {
+    const projectile = {
+        x: thrower.x + thrower.width, // 右端から
+        y: thrower.y + thrower.height / 2,
+        width: 16,
+        height: 16,
+        color: 'gray',
+        speed: 6 // 右向き
+    };
+    projectiles.push(projectile);
+}
+
+// 投擲物の更新
+function updateProjectiles() {
+    for (const projectile of projectiles) {
+        projectile.x += projectile.speed;
+    }
+}
+
+// 投擲物の描画
+function drawProjectiles() {
+    for (const projectile of projectiles) {
+        ctx.fillStyle = projectile.color;
+        ctx.fillRect(projectile.x, projectile.y, projectile.width, projectile.height);
+    }
+}
+
+// --- ゴール演出用の状態 ---
+let isGoalAnimation = false;
+let goalAnimPhase = 0; // 0:ポール下降, 1:右へ歩く, 2:停止, 3:クリア表示
+let goalAnimTimer = 0;
+let goalStartY = null;
+
+// ゴール判定時に呼ぶ
+function startGoalAnimation() {
+    isGoalAnimation = true;
+    goalAnimPhase = 0;
+    goalAnimTimer = 0;
+    goalStartY = player.y;
+    player.velocityX = 0;
+    player.velocityY = 0;
+}
+
+// --- ゴール演出進行 ---
+function updateGoalAnimation() {
+    switch (goalAnimPhase) {
+        case 0: // ポールを下がる
+            if (player.y < goalPole.y + goalPole.height - player.height) {
+                player.y += 3;
+            } else {
+                player.y = goalPole.y + goalPole.height - player.height;
+                goalAnimTimer = 0;
+                goalAnimPhase = 1;
+            }
+            break;
+        case 1: // 右へ歩く
+            if (goalAnimTimer < 60) { // 1秒ほど歩く
+                player.x += 3;
+                goalAnimTimer++;
+            } else {
+                goalAnimPhase = 2;
+                goalAnimTimer = 0;
+            }
+            break;
+        case 2: // 停止
+            goalAnimTimer++;
+            if (goalAnimTimer > 30) { // 少し待つ
+                goalAnimPhase = 3;
+            }
+            break;
+        case 3: // クリア画面表示
+            isGameClear = true;
+            isGoalAnimation = false;
+            break;
+    }
+}
+
+// --- ゴール判定部分で演出開始 ---
+function checkGoal() {
+    if (
+        player.x + player.width > goalPole.x &&
+        player.x < goalPole.x + goalPole.width &&
+        player.y + player.height > goalPole.y &&
+        player.y < goalPole.y + goalPole.height
+    ) {
+        if (!isGoalAnimation && !isGameClear) {
+            startGoalAnimation();
+        }
+    }
+}
+
+// --- メインのupdate関数内で分岐 ---
 function update(delta) {
     if (isMenuOpen) return; // メニュー中は何もしない
+
+    // ゴール演出中は通常更新を止めて演出だけ進める
+    if (isGoalAnimation) {
+        updateGoalAnimation();
+        return;
+    }
+
     if (gameState === GAME_STATE.PLAY) {
         if (isGameClear || isGameOver) return;
 
@@ -1101,58 +2537,15 @@ function update(delta) {
             player.y + player.height > goalPole.y &&
             player.y < goalPole.y + goalPole.height
         ) {
-            if (!isGameClear) {
+            if (!isGameClear && !isGoalAnimation) {
+                // ゴール演出開始
+                startGoalAnimation();
                 // 触れた高さを記録（ポールの上端を0とした相対値）
                 goalTouchY = player.y + player.height - goalPole.y;
                 // スコア加算（高い位置ほど高得点）
-                // ポールの上端: 100点, 下端: 10点
                 let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
                 let goalScore = Math.round(10 + ratio * 90);
                 score += goalScore;
-                isGameClear = true;
-            }
-        }
-
-        // ステージ3のみ投擲敵を動作
-        if (selectedStageIndex === 2 && thrower.width > 0) {
-            thrower.frameTimer++;
-            if (thrower.frameTimer >= thrower.frameInterval) {
-                thrower.frameTimer = 0;
-                thrower.frame = (thrower.frame + 1) % thrower.frameCount;
-            }
-            thrower.throwTimer++;
-            if (thrower.throwTimer >= thrower.throwInterval) {
-                thrower.throwTimer = 0;
-                // 投擲物を生成（左方向に投げる）
-                projectiles.push({
-                    x: thrower.x + thrower.width,
-                    y: thrower.y + thrower.height / 2.5,
-                    radius: 10,
-                    vx: 6,
-                    vy: -3,
-                    color: 'brown'
-                });
-            }
-        }
-        // 投擲物の移動
-        for (const p of projectiles) {
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vy += 0.2; // 投擲物の重力
-        }
-        // 画面外に出た投擲物を削除
-        for (let i = projectiles.length - 1; i >= 0; i--) {
-            if (projectiles[i].x > cameraX + SCREEN_WIDTH || projectiles[i].y > SCREEN_HEIGHT) {
-                projectiles.splice(i, 1);
-            }
-        }
-        // 投擲物とプレイヤーの当たり判定
-        for (const p of projectiles) {
-            const dx = (player.x + player.width / 2) - p.x;
-            const dy = (player.y + player.height / 2) - p.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < player.width / 2 + p.radius) {
-                isGameOver = true;
             }
         }
     }
@@ -1196,7 +2589,7 @@ function draw() {
         }
         ctx.font = "20px sans-serif";
         ctx.fillStyle = "#666";
-        ctx.fillText("'W'or'S'で選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
+        ctx.fillText("WorSで選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
         return;
     }
 
