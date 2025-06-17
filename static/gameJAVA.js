@@ -279,7 +279,19 @@ thrower.frameCount = 25; // スプライトシートのコマ数に合わせて�
 thrower.frameInterval = 23; // 何フレームごとに切り替えるか
 thrower.frameTimer = 0;
 
-// 現在のステージデータをセットする関数
+// ===== 雲オブジェクトの初期値を関数で返す =====
+function getInitialClouds() {
+    return [
+        { x: 100, y: 60, width: 120, height: 50, speed: 0.3 },
+        { x: 400, y: 40, width: 180, height: 60, speed: 0.2 },
+        { x: 800, y: 90, width: 140, height: 50, speed: 0.25 },
+        { x: 1200, y: 70, width: 160, height: 55, speed: 0.18 },
+        { x: 1600, y: 50, width: 110, height: 45, speed: 0.22 }
+    ];
+}
+let clouds = getInitialClouds();
+
+// ===== 雲のリセットをステージ読み込み時に追加 =====
 function loadStage(index) {
     const stage = stages[index];
     // プラットフォーム
@@ -318,6 +330,7 @@ function loadStage(index) {
         thrower.frameInterval = 10;
         thrower.frameTimer = 0;
     }
+    clouds = getInitialClouds(); // 雲をリセット
     projectiles.length = 0;
 }
 
@@ -335,6 +348,7 @@ function resetGame() {
     score = 0;
     goalTouchY = null;
     gameState = GAME_STATE.PLAY;
+    clouds = getInitialClouds(); // 雲をリセット
     // 投擲者のタイマーをリセット
     if (selectedStageIndex === 2 && thrower.width > 0) {
         thrower.throwTimer = 0;      // ← ここを0に
@@ -380,6 +394,7 @@ function resetStage(stageIndex) {
         thrower.frameInterval = 10;
         thrower.frameTimer = 0;
     }
+    clouds = getInitialClouds(); // 雲をリセット
     projectiles.length = 0;
 }
 
@@ -391,11 +406,43 @@ let score = 0;
 
 let lastTimestamp = performance.now();
 
+// ===== 雲オブジェクトの定義 =====
+// （重複定義を削除しました。cloudsは getInitialClouds() で宣言済み）
+
+// ===== 雲の更新処理 =====
+function updateClouds(delta) {
+    for (const cloud of clouds) {
+        cloud.x += cloud.speed * delta * 60;
+        // 画面右端を超えたら左端に戻す（ループ）
+        if (cloud.x - cameraX > 2200) {
+            cloud.x = cameraX - cloud.width - 100;
+        }
+    }
+}
+
+// ===== 雲の描画処理 =====
+function drawClouds() {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    for (const cloud of clouds) {
+        // 雲の位置はカメラに合わせてスクロールしない（固定座標で描画）
+        ctx.beginPath();
+        // 雲の形（楕円を複数重ねる）
+        ctx.ellipse(cloud.x, cloud.y + cloud.height * 0.5, cloud.width * 0.3, cloud.height * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloud.x + cloud.width * 0.3, cloud.y + cloud.height * 0.4, cloud.width * 0.25, cloud.height * 0.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloud.x + cloud.width * 0.2, cloud.y + cloud.height * 0.7, cloud.width * 0.28, cloud.height * 0.25, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
 // 3. ゲームループ
 //------------------------------------
 function gameLoop(timestamp) {
     const delta = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
     lastTimestamp = timestamp;
+    updateClouds(delta); // ← 雲の更新を追加
     update(delta);
     draw();
     requestAnimationFrame(gameLoop);
@@ -574,6 +621,11 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // --- 雲の描画はゲームプレイ中のみ ---
+    if (gameState === GAME_STATE.PLAY) {
+        drawClouds();
+    }
+
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
         ctx.font = "48px sans-serif";
@@ -606,7 +658,7 @@ function draw() {
         }
         ctx.font = "20px sans-serif";
         ctx.fillStyle = "#666";
-        ctx.fillText("WorSで選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
+        ctx.fillText("'W'or'S'で選択、spaceで決定", SCREEN_WIDTH / 2, SCREEN_HEIGHT - 40);
         return;
     }
 
@@ -1162,6 +1214,11 @@ function update(delta) {
 //------------------------------------
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // --- 雲の描画はゲームプレイ中のみ ---
+    if (gameState === GAME_STATE.PLAY) {
+        drawClouds();
+    }
 
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
