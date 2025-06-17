@@ -279,19 +279,7 @@ thrower.frameCount = 25; // スプライトシートのコマ数に合わせて�
 thrower.frameInterval = 23; // 何フレームごとに切り替えるか
 thrower.frameTimer = 0;
 
-// ===== 雲オブジェクトの初期値を関数で返す =====
-function getInitialClouds() {
-    return [
-        { x: 100, y: 60, width: 120, height: 50, speed: 0.3 },
-        { x: 400, y: 40, width: 180, height: 60, speed: 0.2 },
-        { x: 800, y: 90, width: 140, height: 50, speed: 0.25 },
-        { x: 1200, y: 70, width: 160, height: 55, speed: 0.18 },
-        { x: 1600, y: 50, width: 110, height: 45, speed: 0.22 }
-    ];
-}
-let clouds = getInitialClouds();
-
-// ===== 雲のリセットをステージ読み込み時に追加 =====
+// 現在のステージデータをセットする関数
 function loadStage(index) {
     const stage = stages[index];
     // プラットフォーム
@@ -330,7 +318,6 @@ function loadStage(index) {
         thrower.frameInterval = 10;
         thrower.frameTimer = 0;
     }
-    clouds = getInitialClouds(); // 雲をリセット
     projectiles.length = 0;
 }
 
@@ -348,7 +335,6 @@ function resetGame() {
     score = 0;
     goalTouchY = null;
     gameState = GAME_STATE.PLAY;
-    clouds = getInitialClouds(); // 雲をリセット
     // 投擲者のタイマーをリセット
     if (selectedStageIndex === 2 && thrower.width > 0) {
         thrower.throwTimer = 0;      // ← ここを0に
@@ -394,7 +380,6 @@ function resetStage(stageIndex) {
         thrower.frameInterval = 10;
         thrower.frameTimer = 0;
     }
-    clouds = getInitialClouds(); // 雲をリセット
     projectiles.length = 0;
 }
 
@@ -407,7 +392,13 @@ let score = 0;
 let lastTimestamp = performance.now();
 
 // ===== 雲オブジェクトの定義 =====
-// （重複定義を削除しました。cloudsは getInitialClouds() で宣言済み）
+const clouds = [
+    { x: 100, y: 60, width: 120, height: 50, speed: 0.3 },
+    { x: 400, y: 40, width: 180, height: 60, speed: 0.2 },
+    { x: 800, y: 90, width: 140, height: 50, speed: 0.25 },
+    { x: 1200, y: 70, width: 160, height: 55, speed: 0.18 },
+    { x: 1600, y: 50, width: 110, height: 45, speed: 0.22 }
+];
 
 // ===== 雲の更新処理 =====
 function updateClouds(delta) {
@@ -424,13 +415,17 @@ function updateClouds(delta) {
 function drawClouds() {
     ctx.save();
     ctx.globalAlpha = 0.7;
+    // 雲のスクロール率（0:固定, 1:地面と同じ, 0.3なら地面の30%の速さでスクロール）
+    const cloudScrollRate = 0.1;
     for (const cloud of clouds) {
-        // 雲の位置はカメラに合わせてスクロールしない（固定座標で描画）
+        // 雲の位置はカメラに合わせてスクロール
+        const cx = cloud.x - cameraX * cloudScrollRate;
+        const cy = cloud.y;
         ctx.beginPath();
         // 雲の形（楕円を複数重ねる）
-        ctx.ellipse(cloud.x, cloud.y + cloud.height * 0.5, cloud.width * 0.3, cloud.height * 0.4, 0, 0, Math.PI * 2);
-        ctx.ellipse(cloud.x + cloud.width * 0.3, cloud.y + cloud.height * 0.4, cloud.width * 0.25, cloud.height * 0.3, 0, 0, Math.PI * 2);
-        ctx.ellipse(cloud.x + cloud.width * 0.2, cloud.y + cloud.height * 0.7, cloud.width * 0.28, cloud.height * 0.25, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + cloud.width * 0.3, cy + cloud.height * 0.5, cloud.width * 0.3, cloud.height * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + cloud.width * 0.6, cy + cloud.height * 0.4, cloud.width * 0.25, cloud.height * 0.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + cloud.width * 0.5, cy + cloud.height * 0.7, cloud.width * 0.28, cloud.height * 0.25, 0, 0, Math.PI * 2);
         ctx.fillStyle = "#fff";
         ctx.fill();
     }
@@ -621,10 +616,11 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- 雲の描画はゲームプレイ中のみ ---
-    if (gameState === GAME_STATE.PLAY) {
-        drawClouds();
-    }
+    // --- 雲の描画を背景に追加 ---
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+    drawClouds();
+    ctx.restore();
 
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
@@ -1215,10 +1211,11 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- 雲の描画はゲームプレイ中のみ ---
-    if (gameState === GAME_STATE.PLAY) {
-        drawClouds();
-    }
+    // --- 雲の描画を背景に追加 ---
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+    drawClouds();
+    ctx.restore();
 
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
