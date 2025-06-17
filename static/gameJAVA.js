@@ -401,13 +401,34 @@ const clouds = [
 ];
 
 // ===== 雲の更新処理 =====
+let cloudSpawnTimer = 0; // 雲生成用タイマーを追加
+
 function updateClouds(delta) {
-    for (const cloud of clouds) {
+    // 雲を動かす
+    for (let i = clouds.length - 1; i >= 0; i--) {
+        const cloud = clouds[i];
         cloud.x += cloud.speed * delta * 60;
-        // 画面右端を超えたら左端に戻す（ループ）
+        // 画面右端を超えたら配列から削除
         if (cloud.x - cameraX > 2200) {
-            cloud.x = cameraX - cloud.width - 100;
+            clouds.splice(i, 1);
         }
+    }
+    // 一定間隔で新しい雲を左端に生成
+    cloudSpawnTimer += delta;
+    if (cloudSpawnTimer > 10) { // 1.2秒ごとに生成（調整可）
+        cloudSpawnTimer = 0;
+        const newCloud = {
+            x: cameraX - 250, // カメラより左
+            y: 40 + Math.random() * 80,
+            width: 100 + Math.random() * 100,
+            height: 40 + Math.random() * 30,
+            speed: 0.15 + Math.random() * 0.15
+        };
+        clouds.push(newCloud);
+    }
+    // 雲が多すぎる場合は古いものを消す（最大10個など）
+    if (clouds.length > 20) {
+        clouds.splice(0, clouds.length - 10); // 最初の10個だけ残す
     }
 }
 
@@ -616,11 +637,13 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- 雲の描画を背景に追加 ---
-    ctx.save();
-    ctx.translate(-cameraX, 0);
-    drawClouds();
-    ctx.restore();
+    // --- 雲の描画はゲームプレイ中のみ ---
+    if (gameState === GAME_STATE.PLAY) {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+        drawClouds();
+        ctx.restore();
+    }
 
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
@@ -1211,11 +1234,13 @@ function update(delta) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- 雲の描画を背景に追加 ---
-    ctx.save();
-    ctx.translate(-cameraX, 0);
-    drawClouds();
-    ctx.restore();
+    // --- 雲の描画はゲームプレイ中のみ ---
+    if (gameState === GAME_STATE.PLAY) {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+        drawClouds();
+        ctx.restore();
+    }
 
     if (gameState === GAME_STATE.TITLE) {
         // タイトル画面
