@@ -415,7 +415,7 @@ function updateClouds(delta) {
     }
     // 一定間隔で新しい雲を左端に生成
     cloudSpawnTimer += delta;
-    if (cloudSpawnTimer > 10) { // 1.2秒ごとに生成（調整可）
+    if (cloudSpawnTimer > 5) { // 1.2秒ごとに生成（調整可）
         cloudSpawnTimer = 0;
         const newCloud = {
             x: cameraX - 250, // カメラより左
@@ -575,14 +575,13 @@ function update(delta) {
             player.y < goalPole.y + goalPole.height
         ) {
             if (!isGameClear) {
-                // 触れた高さを記録（ポールの上端を0とした相対値）
                 goalTouchY = player.y + player.height - goalPole.y;
-                // スコア加算（高い位置ほど高得点）
-                // ポールの上端: 100点, 下端: 10点
                 let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
                 let goalScore = Math.round(10 + ratio * 90);
                 score += goalScore;
                 isGameClear = true;
+                goalAnimationTimer = 0; // アニメーション開始
+                goalFlagY = goalPole.y; // 旗を一番上からスタート
             }
         }
 
@@ -627,6 +626,26 @@ function update(delta) {
             if (dist < player.width / 2 + p.radius) {
                 isGameOver = true;
             }
+        }
+    } else if (isGameClear) {
+        // ゴール演出の段階管理
+        if (goalPhase === 0) {
+            // 旗を降ろす
+            goalAnimationTimer++;
+            if (goalAnimationTimer >= 240) { // ← ここを60から120に変更（約2倍の時間）
+                goalAnimationTimer = 0;
+                goalPhase = 1; // 旗降下が終わったら次の段階へ
+            }
+        } else if (goalPhase === 1) {
+            player.velocityX = 3;
+            player.x += player.velocityX;
+            goalAnimationTimer++;
+            if (goalAnimationTimer >= 60) {
+                player.velocityX = 0;
+                goalPhase = 2;
+            }
+        } else {
+            player.velocityX = 0;
         }
     }
     // タイトル画面やステージ選択画面では何もしない
@@ -803,9 +822,18 @@ function draw() {
         ctx.fillStyle = "#FFD700";
         ctx.fill();
         // 旗
-        let flagY = goalPole.y + (goalTouchY !== null ? goalTouchY - goalPole.flagHeight / 2 : 0);
+        let flagY;
         if (isGameClear && goalTouchY !== null) {
-            // クリア時は触れた高さに旗を移動
+            // ゴール演出中は旗をアニメーションで降ろす
+            if (goalAnimationTimer < 60 && goalFlagY !== null) {
+                // 1秒(60フレーム)かけて降ろす
+                const targetY = goalPole.y + goalTouchY - goalPole.flagHeight / 2;
+                goalFlagY += (targetY - goalFlagY) * 0.2;
+                flagY = goalFlagY;
+            } else {
+                flagY = goalPole.y + goalTouchY - goalPole.flagHeight / 2;
+                goalFlagY = flagY;
+            }
             ctx.fillStyle = "#f33";
             ctx.fillRect(goalPole.x + goalPole.width, flagY, goalPole.flagWidth, goalPole.flagHeight);
             ctx.strokeStyle = "#c00";
@@ -1172,14 +1200,13 @@ function update(delta) {
             player.y < goalPole.y + goalPole.height
         ) {
             if (!isGameClear) {
-                // 触れた高さを記録（ポールの上端を0とした相対値）
                 goalTouchY = player.y + player.height - goalPole.y;
-                // スコア加算（高い位置ほど高得点）
-                // ポールの上端: 100点, 下端: 10点
                 let ratio = 1 - Math.min(Math.max(goalTouchY / goalPole.height, 0), 1);
                 let goalScore = Math.round(10 + ratio * 90);
                 score += goalScore;
                 isGameClear = true;
+                goalAnimationTimer = 0; // アニメーション開始
+                goalFlagY = goalPole.y; // 旗を一番上からスタート
             }
         }
 
@@ -1224,6 +1251,26 @@ function update(delta) {
             if (dist < player.width / 2 + p.radius) {
                 isGameOver = true;
             }
+        }
+    } else if (isGameClear) {
+        // ゴール演出の段階管理
+        if (goalPhase === 0) {
+            // 旗を降ろす
+            goalAnimationTimer++;
+            if (goalAnimationTimer >= 120) { // ← ここを60から120に変更（約2倍の時間）
+                goalAnimationTimer = 0;
+                goalPhase = 1; // 旗降下が終わったら次の段階へ
+            }
+        } else if (goalPhase === 1) {
+            player.velocityX = 3;
+            player.x += player.velocityX;
+            goalAnimationTimer++;
+            if (goalAnimationTimer >= 60) {
+                player.velocityX = 0;
+                goalPhase = 2;
+            }
+        } else {
+            player.velocityX = 0;
         }
     }
     // タイトル画面やステージ選択画面では何もしない
@@ -1400,9 +1447,18 @@ function draw() {
         ctx.fillStyle = "#FFD700";
         ctx.fill();
         // 旗
-        let flagY = goalPole.y + (goalTouchY !== null ? goalTouchY - goalPole.flagHeight / 2 : 0);
+        let flagY;
         if (isGameClear && goalTouchY !== null) {
-            // クリア時は触れた高さに旗を移動
+            // ゴール演出中は旗をアニメーションで降ろす
+            if (goalAnimationTimer < 60 && goalFlagY !== null) {
+                // 1秒(60フレーム)かけて降ろす
+                const targetY = goalPole.y + goalTouchY - goalPole.flagHeight / 2;
+                goalFlagY += (targetY - goalFlagY) * 0.2;
+                flagY = goalFlagY;
+            } else {
+                flagY = goalPole.y + goalTouchY - goalPole.flagHeight / 2;
+                goalFlagY = flagY;
+            }
             ctx.fillStyle = "#f33";
             ctx.fillRect(goalPole.x + goalPole.width, flagY, goalPole.flagWidth, goalPole.flagHeight);
             ctx.strokeStyle = "#c00";
